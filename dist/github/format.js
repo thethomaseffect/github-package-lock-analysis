@@ -27,7 +27,7 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
         if (change.cves.length > 0) {
             lines.push(`  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`);
         }
-        lines.push(`  - [Changelog / package page](${change.changelogUrl})`);
+        lines.push(`  - [${change.changelog.label}](${change.changelog.url})`);
         lines.push("");
     }
     if (reportUrl) {

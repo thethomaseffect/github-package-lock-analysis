@@ -40,7 +40,7 @@ export function buildPullRequestComment(
         `  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`,
       );
     }
-    lines.push(`  - [Changelog / package page](${change.changelogUrl})`);
+    lines.push(`  - [${change.changelog.label}](${change.changelog.url})`);
     lines.push("");
   }
 

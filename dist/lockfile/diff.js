@@ -46,7 +46,7 @@ export function toUnenrichedChanges(rawChanges) {
         securityLevel: "yellow",
         cves: [],
         hackerNews: [],
-        changelogUrl: "",
+        changelog: { url: "", label: "Package page", kind: "npm" },
     }));
 }
 //# sourceMappingURL=diff.js.map

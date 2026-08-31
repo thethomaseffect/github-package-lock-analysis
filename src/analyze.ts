@@ -1,6 +1,6 @@
+import { resolveChangelogLink } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
-import { buildChangelogUrl } from "./enrichment/urls.js";
 import { diffLockfiles, type RawPackageChange } from "./lockfile/diff.js";
 import type {
   AnalysisOptions,
@@ -14,10 +14,13 @@ async function enrichChange(
   change: RawPackageChange,
   includeHackerNews: boolean,
 ): Promise<PackageChange> {
-  const cves = await lookupCves(change.name, change.newVersion);
-  const hackerNews = includeHackerNews
-    ? await lookupHackerNews(change.name, change.newVersion)
-    : [];
+  const [cves, hackerNews, changelog] = await Promise.all([
+    lookupCves(change.name, change.newVersion),
+    includeHackerNews
+      ? lookupHackerNews(change.name, change.newVersion)
+      : Promise.resolve([]),
+    resolveChangelogLink(change.name),
+  ]);
 
   const securityLevel: SecurityLevel = cves.length > 0 ? "red" : "yellow";
 
@@ -26,7 +29,7 @@ async function enrichChange(
     securityLevel,
     cves,
     hackerNews,
-    changelogUrl: buildChangelogUrl(change.name),
+    changelog,
   };
 }
 

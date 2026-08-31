@@ -35,8 +35,8 @@ export function PackageRow({ change }: PackageRowProps) {
         )}
       </p>
       <p className="meta">
-        <a href={change.changelogUrl} target="_blank" rel="noopener noreferrer">
-          Changelog / package page
+        <a href={change.changelog.url} target="_blank" rel="noopener noreferrer">
+          {change.changelog.label}
         </a>
       </p>
       {change.hackerNews.length > 0 ? (

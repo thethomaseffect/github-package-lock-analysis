@@ -1,19 +1,22 @@
+import { resolveChangelogLink } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
-import { buildChangelogUrl } from "./enrichment/urls.js";
 import { diffLockfiles } from "./lockfile/diff.js";
 async function enrichChange(change, includeHackerNews) {
-    const cves = await lookupCves(change.name, change.newVersion);
-    const hackerNews = includeHackerNews
-        ? await lookupHackerNews(change.name, change.newVersion)
-        : [];
+    const [cves, hackerNews, changelog] = await Promise.all([
+        lookupCves(change.name, change.newVersion),
+        includeHackerNews
+            ? lookupHackerNews(change.name, change.newVersion)
+            : Promise.resolve([]),
+        resolveChangelogLink(change.name),
+    ]);
     const securityLevel = cves.length > 0 ? "red" : "yellow";
     return {
         ...change,
         securityLevel,
         cves,
         hackerNews,
-        changelogUrl: buildChangelogUrl(change.name),
+        changelog,
     };
 }
 export async function analyzeLockfileChanges(oldLockfile, newLockfile, options = {}) {
