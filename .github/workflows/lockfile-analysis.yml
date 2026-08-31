@@ -10,11 +10,6 @@ on:
       - package-lock.json
   workflow_dispatch:
     inputs:
-      use-fixtures:
-        description: Run against sample fixture lockfiles instead of the repo lockfile
-        required: false
-        type: boolean
-        default: false
       audit-existing:
         description: Scan the current HEAD lockfile for existing CVEs (manual only; no diff)
         required: false
@@ -64,16 +59,14 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Analyze root lockfile (git diff)
-        if: ${{ !inputs.use-fixtures }}
+      - uses: ./
         id: analysis
-        uses: ./
         with:
           lockfile-path: package-lock.json
           output-dir: report-output
           post-pr-comment: ${{ github.event_name == 'pull_request' }}
           skip-if-unchanged: ${{ github.event_name != 'workflow_dispatch' }}
-          audit-existing: ${{ github.event_name == 'workflow_dispatch' && !inputs.use-fixtures && inputs.audit-existing }}
+          audit-existing: ${{ github.event_name == 'workflow_dispatch' && inputs.audit-existing }}
           fail-on-red: true
           report-manifest-path: gh-pages-site/reports/manifest.json
           use-report-manifest-base: true
@@ -81,43 +74,14 @@ jobs:
           report-commit: ${{ steps.report-commit.outputs.sha }}
           report-commit-title: ${{ steps.report-commit.outputs.title }}
 
-      - name: Analyze fixture lockfiles (demo)
-        if: ${{ inputs.use-fixtures }}
-        id: analysis-fixtures
-        uses: ./
-        with:
-          old-lockfile-path: fixtures/sample-project/before/package-lock.json
-          new-lockfile-path: fixtures/sample-project/after/package-lock.json
-          output-dir: report-output
-          project-name: sample-project
-          post-pr-comment: false
-          skip-if-unchanged: false
-          audit-existing: false
-          fail-on-red: true
-          pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          report-commit: ${{ steps.report-commit.outputs.sha }}
-          report-commit-title: ${{ steps.report-commit.outputs.title }}
-
-      - name: Resolve report output
-        id: resolved
-        if: always()
-        run: |
-          if [ "${{ inputs.use-fixtures }}" = "true" ]; then
-            echo "report-path=${{ steps.analysis-fixtures.outputs.report-path }}" >> "$GITHUB_OUTPUT"
-            echo "report-url=${{ steps.analysis-fixtures.outputs.report-url }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "report-path=${{ steps.analysis.outputs.report-path }}" >> "$GITHUB_OUTPUT"
-            echo "report-url=${{ steps.analysis.outputs.report-url }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/upload-artifact@v6
-        if: always() && steps.resolved.outputs.report-path != ''
+        if: steps.analysis.outputs.report-path != ''
         with:
           name: lockfile-report
           path: report-output/index.html
 
       - name: Merge report into GitHub Pages site
-        if: steps.resolved.outputs.report-path != ''
+        if: steps.analysis.outputs.report-path != ''
         run: |
           npx tsx scripts/prepare-pages-site.ts \
             --site-dir gh-pages-site \
@@ -127,10 +91,10 @@ jobs:
             --repository-url "https://github.com/${{ github.repository }}"
 
       - uses: actions/upload-pages-artifact@v5
-        if: steps.resolved.outputs.report-path != ''
+        if: steps.analysis.outputs.report-path != ''
         with:
           path: gh-pages-site
 
       - id: deployment
-        if: steps.resolved.outputs.report-path != ''
+        if: steps.analysis.outputs.report-path != ''
         uses: actions/deploy-pages@v5

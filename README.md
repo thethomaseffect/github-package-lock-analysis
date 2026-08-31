@@ -45,7 +45,8 @@ Unchanged packages are omitted.
 ## Project structure
 
 ```
-├── action.yml                              # GitHub Action definition
+├── action.yml                              # GitHub Action definition (consumer entrypoint)
+├── demo/action.yml                         # Composite demo action for sample-project fixtures (this repo only)
 ├── src/
 │   ├── index.ts                            # Action entrypoint
 │   ├── analyze.ts                          # Diff + enrichment orchestration
@@ -443,12 +444,12 @@ Alternatively, analyze on merge to `main` only (Tier 2 push trigger) and keep PR
 
 ## GitHub Pages (this repository)
 
-This repo publishes a live demo via [publish-pages.yml](.github/workflows/publish-pages.yml):
+This repo publishes a live demo via [publish-pages.yml](.github/workflows/publish-pages.yml) using [`demo/action.yml`](demo/action.yml) — a thin composite wrapper around the root action with the committed `fixtures/sample-project` lockfile pair baked in. **Consumers should use the root action only** (`@v1`); the demo action exists so fixture paths and demo-only defaults do not clutter consumer workflows.
 
 - **Index:** https://thethomaseffect.github.io/github-package-lock-analysis/
 - **Example report:** https://thethomaseffect.github.io/github-package-lock-analysis/reports/33381735935/
 
-Real lockfile analysis on PR/push uses [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml).
+Real lockfile analysis on PR/push uses [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml) with the root action.
 
 ## Release
 

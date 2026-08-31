@@ -1,0 +1,73 @@
+name: Sample project lockfile demo
+description: Analyze committed sample-project fixture lockfiles (this repo's GitHub Pages demo only — consumers use the root action)
+author: github-package-lock-analysis
+
+inputs:
+  output-dir:
+    description: Directory where the static HTML report is written
+    required: false
+    default: report-output
+  pages-base-url:
+    description: GitHub Pages base URL for report-url output
+    required: true
+  report-commit:
+    description: Commit SHA stored in report metadata
+    required: false
+    default: ""
+  report-base-commit:
+    description: Base commit SHA stored in report metadata
+    required: false
+    default: ""
+  report-commit-title:
+    description: Commit title shown on the reports index
+    required: false
+    default: ""
+
+outputs:
+  report-path:
+    description: Path to the generated index.html report
+    value: ${{ steps.analyze.outputs.report-path }}
+  report-url:
+    description: Public URL to this report when pages-base-url is set
+    value: ${{ steps.analyze.outputs.report-url }}
+  report-commit:
+    description: Commit SHA associated with this report
+    value: ${{ steps.analyze.outputs.report-commit }}
+  report-run-id:
+    description: Workflow run ID associated with this report
+    value: ${{ steps.analyze.outputs.report-run-id }}
+  changed-count:
+    description: Number of packages with version changes
+    value: ${{ steps.analyze.outputs.changed-count }}
+  red-count:
+    description: Number of changed packages flagged with known CVEs
+    value: ${{ steps.analyze.outputs.red-count }}
+  yellow-count:
+    description: Number of packages changed without confirmed CVEs
+    value: ${{ steps.analyze.outputs.yellow-count }}
+  existing-red-count:
+    description: Always 0 for fixture demo runs
+    value: ${{ steps.analyze.outputs.existing-red-count }}
+
+runs:
+  using: composite
+  steps:
+    - id: analyze
+      uses: ..
+      with:
+        old-lockfile-path: fixtures/sample-project/before/package-lock.json
+        new-lockfile-path: fixtures/sample-project/after/package-lock.json
+        project-name: sample-project
+        output-dir: ${{ inputs.output-dir }}
+        post-pr-comment: false
+        skip-if-unchanged: false
+        fail-on-red: false
+        include-hackernews: false
+        pages-base-url: ${{ inputs.pages-base-url }}
+        report-commit: ${{ inputs.report-commit }}
+        report-base-commit: ${{ inputs.report-base-commit }}
+        report-commit-title: ${{ inputs.report-commit-title }}
+
+branding:
+  icon: beaker
+  color: purple

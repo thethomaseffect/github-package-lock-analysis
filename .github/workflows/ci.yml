@@ -47,15 +47,11 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Run action against fixtures
-        uses: ./
+      - name: Run demo action against fixtures
+        uses: ./demo
         with:
-          old-lockfile-path: fixtures/sample-project/before/package-lock.json
-          new-lockfile-path: fixtures/sample-project/after/package-lock.json
+          pages-base-url: https://example.github.io/demo
           output-dir: report-output
-          project-name: sample-project
-          fail-on-red: false
-          audit-existing: false
 
       - uses: actions/upload-artifact@v6
         if: always()

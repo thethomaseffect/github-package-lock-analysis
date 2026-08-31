@@ -1,7 +1,7 @@
 name: Publish Pages Demo
 
-# Publishes the fixture demo under reports/<run-id>/ and updates the site index.
-# Real lockfile analysis on PRs/push also publishes via lockfile-analysis.yml.
+# Publishes the sample-project fixture demo via demo/action.yml and updates the site index.
+# Real lockfile analysis on PR/push uses lockfile-analysis.yml with the root action.
 
 on:
   workflow_dispatch:
@@ -9,13 +9,12 @@ on:
     branches: [main]
     paths:
       - .github/workflows/publish-pages.yml
+      - demo/action.yml
       - fixtures/sample-project/**
       - scripts/prepare-pages-site.ts
       - scripts/sync-pages-site-from-live.ts
       - src/report-manifest.ts
       - src/report-meta.ts
-      - src/git/manifest.ts
-      - action.yml
       - dist/bundle/**
 
 permissions:
@@ -60,22 +59,14 @@ jobs:
 
       - name: Build fixture report
         id: demo
-        uses: ./
+        uses: ./demo
         with:
-          old-lockfile-path: fixtures/sample-project/before/package-lock.json
-          new-lockfile-path: fixtures/sample-project/after/package-lock.json
-          output-dir: report-output
-          project-name: sample-project
-          post-pr-comment: false
-          skip-if-unchanged: false
-          fail-on-red: false
           pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           report-commit: ${{ github.sha }}
           report-base-commit: ${{ steps.commit-meta.outputs.base }}
           report-commit-title: ${{ steps.commit-meta.outputs.title }}
 
       - name: Merge report into GitHub Pages site
-        id: merge
         run: |
           npx tsx scripts/prepare-pages-site.ts \
             --site-dir gh-pages-site \
