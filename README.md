@@ -1,109 +1,34 @@
 # github-package-lock-analysis
 
-A GitHub Action that reviews **nested dependency changes** in `package-lock.json` — the updates most security tools never surface.
+When `package-lock.json` changes on a pull request, this action shows you **every nested package that moved** — not just what's in `package.json`. It checks CVE databases, builds a static HTML report, and can comment on the PR.
 
-When a pull request changes the lockfile, this action diffs old vs new, looks up CVE data, and publishes a **static report** so reviewers can see exactly which transitive packages moved and whether known vulnerabilities apply.
+Most supply-chain trouble hides in transitive deps. Your app code and direct dependencies might look fine while a deep nested package quietly updates. This closes that gap.
 
-## The problem
+## What you get
 
-Supply-chain attacks often arrive through **deep transitive dependencies**. Your `package.json` may not change at all while `package-lock.json` picks up a compromised nested package. Typical scanners focus on:
+On each run:
 
-- Your application source code
-- Direct dependencies in `package.json`
+1. Diff the old and new lockfile (from git on PRs, or paths you provide)
+2. List only packages whose **resolved version** changed
+3. Look up CVEs via [OSV](https://osv.dev/) (links to [NVD](https://nvd.nist.gov/))
+4. Write an HTML report and optionally post a PR summary
 
-They rarely give you a readable audit of **every lockfile version bump** on a PR.
-
-## What it does
-
-1. Detects changes to `package-lock.json` in CI
-2. Compares the previous lockfile with the new one (from git on PR/push, or explicit paths)
-3. Collects every package whose **resolved version** changed (including nested deps)
-4. Queries CVE databases via [OSV](https://osv.dev/) (links to [NVD](https://nvd.nist.gov/) records)
-5. Builds a static HTML report (React + TypeScript) listing **only updated packages**
-6. Optionally posts a PR comment and uploads the HTML report as a workflow artifact
-
-### Report layout
+Paths in the report look like breadcrumbs:
 
 ```
-sample-project > cheerio > lodash
-sample-project > accepts > negotiator
+my-app > cheerio > lodash
+my-app > accepts > negotiator
 ```
 
-Each entry includes:
+Each row: old → new version, changelog/npm links, and a colour badge:
 
-- Old → new version
-- Changelog link (best effort)
-- CVE links when matches exist
-- **Red** — known CVE likely applies to this version
-- **Yellow** — version changed; review recommended
-- **❓ Manual review** — enrichment was skipped (see [Performance and enrichment limits](#performance-and-enrichment-limits)); use the npm link to investigate
+- **Red** — known CVE likely applies
+- **Yellow** — changed; worth a look
+- **❓ Manual review** — too many changes for automatic CVE lookup; use the npm link (see [Large lockfile diffs](#large-lockfile-diffs))
 
-Unchanged packages are omitted.
+## Getting started
 
-## Project structure
-
-```
-├── action.yml                              # GitHub Action definition (consumer entrypoint)
-├── demo/action.yml                         # Composite demo action for sample-project fixtures (this repo only)
-├── src/
-│   ├── index.ts                            # Action entrypoint
-│   ├── analyze.ts                          # Diff + enrichment orchestration
-│   ├── git/                                # Auto-resolve base/head lockfiles
-│   ├── github/                             # PR comments & summary formatting
-│   ├── lockfile/                           # Parse & diff package-lock.json
-│   ├── enrichment/                         # CVE (OSV) and changelog URLs
-│   └── report/                             # React static HTML report
-├── fixtures/sample-project/                # Safe before/after lockfile pairs
-├── scripts/
-│   ├── run-fixtures.ts                       # End-to-end local fixture runner
-│   ├── prepare-pages-site.ts                 # Merge reports into a static site (Pages / custom host)
-│   └── sync-pages-site-from-live.ts          # Download deployed site before merge (retain report history)
-├── .github/workflows/
-│   ├── ci.yml                              # Build & test
-│   ├── lockfile-analysis.yml               # Demo workflow for this repo
-│   └── lockfile-analysis-reusable.yml      # Callable workflow for consumers
-└── tests/
-```
-
-## Development
-
-Requires Node.js 20+.
-
-```bash
-npm install
-npm run lint      # Typecheck
-npm test          # Unit tests
-npm run build     # Compile to dist/
-npm run test:fixtures   # Full pipeline against fixtures (hits OSV API)
-```
-
-The fixture project uses `cheerio` (direct dep) whose nested `lodash@4.17.15` has known CVEs → red, plus a nested `negotiator` downgrade under `accepts` → yellow. Lockfiles are committed as static JSON — **no `npm install` is run** in CI against fixture data.
-
-After `npm run test:fixtures`, open `fixtures/sample-project/.output/index.html` to preview the report.
-
-## Consumer setup
-
-Pick one of three integration levels. All of them use the published action:
-
-```yaml
-- uses: thethomaseffect/github-package-lock-analysis@v1
-```
-
-**Requirements for every setup**
-
-- `actions/checkout` with `fetch-depth: 0` when the action should resolve base/head lockfiles from git (PR and push flows).
-- `permissions.contents: read` at minimum.
-- `permissions.pull-requests: write` if you want PR comments (`post-pr-comment: true`, the default).
-
-**Monorepo lockfiles** — set `lockfile-path` (or `old-lockfile-path` / `new-lockfile-path`) to the path inside the repo, e.g. `apps/web/package-lock.json`.
-
----
-
-### Tier 1 — Artifact only (simplest)
-
-No hosting setup. The action writes HTML to `report-output/`, posts an optional PR comment, and adds a job summary with a download link.
-
-Create `.github/workflows/lockfile-analysis.yml` in your repository:
+Add a workflow (e.g. `.github/workflows/lockfile-analysis.yml`):
 
 ```yaml
 name: Lockfile Analysis
@@ -124,14 +49,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # needed so git can find the base lockfile
 
       - uses: thethomaseffect/github-package-lock-analysis@v1
         id: analysis
         with:
           lockfile-path: package-lock.json
-          post-pr-comment: true
-          fail-on-red: true
 
       - uses: actions/upload-artifact@v6
         if: steps.analysis.outputs.report-path != ''
@@ -140,326 +63,99 @@ jobs:
           path: report-output/
 ```
 
-**Or** call the reusable workflow (same behaviour, less YAML to maintain):
+That's enough for most teams: PR comment + downloadable HTML artifact. The action skips the run if the lockfile didn't change (`skip-if-unchanged`, on by default).
+
+**Monorepo?** Set `lockfile-path` to e.g. `apps/web/package-lock.json`.
+
+**Want less YAML?** Call the [reusable workflow](.github/workflows/lockfile-analysis-reusable.yml):
 
 ```yaml
 jobs:
-  analyze-lockfile:
+  analyze:
     uses: thethomaseffect/github-package-lock-analysis/.github/workflows/lockfile-analysis-reusable.yml@v1
     permissions:
       contents: read
       pull-requests: write
 ```
 
-On `pull_request` events the action resolves:
+## Where to host the report
 
-- **Base lockfile** — `pull_request.base.sha` (or the last published report commit when manifest mode is enabled; see Tier 2)
-- **Head lockfile** — the checked-out workspace file
+The action always writes files to `report-output/`. What you do with them is up to you:
 
-Set `skip-if-unchanged: true` (default) to exit early when git reports no diff for the lockfile.
-
----
-
-### Tier 2 — GitHub Pages (public retained reports)
-
-Each workflow run publishes a unique report under **`/reports/<workflow-run-id>/`**. The site root lists **every** workflow run, including multiple runs for the same commit. Individual reports link back to the index.
-
-**One-time repo setup**
-
-1. Enable **GitHub Pages** in repository settings with source **GitHub Actions**.
-2. Copy [`scripts/prepare-pages-site.ts`](scripts/prepare-pages-site.ts) and [`scripts/sync-pages-site-from-live.ts`](scripts/sync-pages-site-from-live.ts) into your repo (or vendor from `@v1`). The sync script downloads the currently deployed site so each run appends to the reports index (GitHub Actions Pages deploys do not maintain a `gh-pages` git branch).
-3. Add a workflow based on the pattern below (see [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml) in this repo for a full reference).
-
-```yaml
-name: Lockfile Analysis
-
-on:
-  pull_request:
-    paths:
-      - package-lock.json
-  push:
-    branches: [main]
-    paths:
-      - package-lock.json
-
-permissions:
-  contents: read
-  pull-requests: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: lockfile-pages
-  cancel-in-progress: false
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Sync existing GitHub Pages site from live URL
-        run: |
-          mkdir -p gh-pages-site/reports
-          npx tsx scripts/sync-pages-site-from-live.ts \
-            --site-dir gh-pages-site \
-            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-
-      - name: Resolve commit metadata
-        id: report-commit
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            SHA="${{ github.event.pull_request.head.sha }}"
-          else
-            SHA="${{ github.sha }}"
-          fi
-          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          {
-            echo "title<<EOF"
-            git log -1 --format=%s "${SHA}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - uses: thethomaseffect/github-package-lock-analysis@v1
-        id: analysis
-        with:
-          lockfile-path: package-lock.json
-          post-pr-comment: ${{ github.event_name == 'pull_request' }}
-          pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          report-manifest-path: gh-pages-site/reports/manifest.json
-          use-report-manifest-base: true
-          report-commit: ${{ steps.report-commit.outputs.sha }}
-          report-commit-title: ${{ steps.report-commit.outputs.title }}
-
-      - uses: actions/upload-artifact@v6
-        if: steps.analysis.outputs.report-path != ''
-        with:
-          name: lockfile-report
-          path: report-output/
-
-      - name: Merge report into Pages site
-        if: steps.analysis.outputs.report-path != ''
-        run: |
-          npx tsx scripts/prepare-pages-site.ts \
-            --site-dir gh-pages-site \
-            --report-file report-output/index.html \
-            --meta-file report-output/report-meta.json \
-            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
-            --repository-url "https://github.com/${{ github.repository }}"
-
-      - uses: actions/upload-pages-artifact@v5
-        if: steps.analysis.outputs.report-path != ''
-        with:
-          path: gh-pages-site
-
-      - id: deployment
-        if: steps.analysis.outputs.report-path != ''
-        uses: actions/deploy-pages@v5
-```
-
-**Example URLs** (replace owner/repo):
-
-- Index: `https://my-org.github.io/my-app/`
-- Report: `https://my-org.github.io/my-app/reports/12345678901/`
-
-**Custom Pages URL** — set `pages-base-url` to wherever the site is served:
-
-| Hosting | Example `pages-base-url` |
-| --- | --- |
-| Project site | `https://my-org.github.io/my-app` |
-| User/org site repo | `https://my-org.github.io` |
-| Custom domain | `https://lockfile-reports.example.com` |
-| Subpath on a larger site | `https://example.com/security/lockfiles` |
-
-**Diff baseline with manifest mode** — when `use-report-manifest-base: true`, the action compares the current lockfile against the **last published report commit**, not every intermediate commit. If ten commits landed between reports, one report covers the cumulative diff from the previous report to HEAD.
-
----
-
-### Tier 3 — Custom host (S3, Netlify, internal server, …)
-
-The action only generates files; you choose where to upload them.
-
-1. Run the action (Tier 1 YAML is enough for the analysis step).
-2. Run `prepare-pages-site.ts` to merge the new report into a site directory (same script as Tier 2).
-3. Deploy that directory with your own tooling.
-
-```yaml
-      - uses: thethomaseffect/github-package-lock-analysis@v1
-        id: analysis
-        with:
-          lockfile-path: package-lock.json
-          pages-base-url: https://reports.example.com
-          fail-on-red: true
-
-      - name: Build static site
-        if: steps.analysis.outputs.report-path != ''
-        run: |
-          npx tsx scripts/prepare-pages-site.ts \
-            --site-dir ./site \
-            --report-file report-output/index.html \
-            --meta-file report-output/report-meta.json \
-            --pages-base-url "https://reports.example.com" \
-            --repository-url "https://github.com/${{ github.repository }}"
-
-      # Example: upload to S3 (replace with Netlify, Azure Blob, rsync, etc.)
-      - run: aws s3 sync ./site s3://my-reports-bucket/ --delete
-```
-
-Set `pages-base-url` to the **public base URL** where `./site` will be served so PR comments and the reports index link correctly. To override the link entirely, pass `report-url` instead.
-
-If you already host reports elsewhere and only need a link in PR comments, skip `prepare-pages-site.ts` and set:
-
-```yaml
-report-url: https://your-cdn.example.com/path/to/this-report/
-```
-
----
-
-### Permissions reference
-
-| Feature | Permissions |
-| --- | --- |
-| PR comments + artifact | `contents: read`, `pull-requests: write` |
-| GitHub Pages deploy | above + `pages: write`, `id-token: write`, Pages enabled, `github-pages` environment |
-
----
-
-### Explicit lockfile paths (fixtures / testing)
-
-```yaml
-- uses: thethomaseffect/github-package-lock-analysis@v1
-  id: analysis
-  with:
-    old-lockfile-path: fixtures/sample-project/before/package-lock.json
-    new-lockfile-path: fixtures/sample-project/after/package-lock.json
-    output-dir: report-output
-    project-name: my-app
-    skip-if-unchanged: false
-    fail-on-red: false
-```
-
-Use `fail-on-red: false` when the fixture intentionally includes CVEs (demo/CI smoke).
-
-### Performance and enrichment limits
-
-Each changed package can trigger CVE lookups (OSV) and changelog discovery (npm + GitHub). A full lockfile refresh — common after `npm update` or a major framework bump — can touch thousands of nested packages.
-
-**`enrichment-limit`** (default `500`) is the main knob. It sets how many changed packages receive full automated enrichment. Above that threshold, the action still diffs and lists **every** change in the HTML report, but rows are marked **❓ Manual review** (yellow) with an npm link only — no CVE or changelog HTTP calls. Hover the badge in the report for a short explanation; reviewers follow the npm link to check advisories and release notes manually.
-
-| Input | Default | Role |
-| --- | ---: | --- |
-| `enrichment-limit` | `500` | Max packages to enrich; above this, manual-review mode for all rows |
-| `enrichment-concurrency` | `8` | Parallel enrichment requests when under the limit |
-| `summary-list-limit` | `100` | Max packages listed in PR comments and job summaries (full list always in the HTML report) |
-
-Example for a large monorepo that still wants full enrichment on big but not enormous diffs:
-
-```yaml
-- uses: thethomaseffect/github-package-lock-analysis@v1
-  with:
-    enrichment-limit: 2000
-    enrichment-concurrency: 12
-```
-
-**How long does it take?** Under the limit, runtime is dominated by outbound API calls. A few hundred unique version changes usually finish in minutes; diffs with thousands of changes can take **up to an hour** depending on OSV/npm/GitHub latency and rate limits. For most teams that only change `package-lock.json` on occasional dependency PRs, that is acceptable — the job runs in the background while reviewers work on other checks.
-
-**Frequent lockfile changes** — if your pipeline touches the lockfile often (nightly bumps, many parallel dependency PRs, automated renovate batches), you may not want analysis on the critical path for every push. Run it **after** your main CI passes so build and test are not waiting on enrichment:
-
-```yaml
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      # build, test, lint …
-
-  analyze-lockfile:
-    needs: ci
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - uses: thethomaseffect/github-package-lock-analysis@v1
-        with:
-          lockfile-path: package-lock.json
-          post-pr-comment: true
-          fail-on-red: false   # informational — review the report or Pages URL later
-```
-
-The HTML artifact (Tier 1) or GitHub Pages report (Tier 2) is still produced; the PR comment and job summary link to it even when the job is not a merge gate. Set `fail-on-red: true` only when you want known CVEs to block the workflow.
-
-Alternatively, analyze on merge to `main` only (Tier 2 push trigger) and keep PR runs as artifact-only with `fail-on-red: false` — cumulative diffs via manifest mode mean you do not need a report on every intermediate commit.
-
-### Inputs
-
-| Input | Default | Description |
+| Approach | Good for | What to add |
 | --- | --- | --- |
-| `lockfile-path` | `package-lock.json` | Lockfile path relative to repo root |
-| `old-lockfile-path` | *(auto)* | Override base lockfile path |
-| `new-lockfile-path` | *(auto)* | Override head lockfile path |
-| `base-ref` / `head-ref` | *(auto)* | Git refs when resolving from history |
-| `output-dir` | `report-output` | Directory for HTML report and `report-meta.json` |
-| `project-name` | *(empty)* | Display name for the project root in breadcrumb paths |
-| `post-pr-comment` | `true` | Post/update PR summary comment |
-| `skip-if-unchanged` | `true` | Skip when git diff is empty |
-| `fail-on-red` | `true` | Fail the job when known CVEs are found |
-| `enrichment-limit` | `500` | Max changed packages to enrich with CVE/changelog lookups; above this, all rows are ❓ manual review (npm link only) |
-| `enrichment-concurrency` | `8` | Parallel enrichment requests when under `enrichment-limit` |
-| `summary-list-limit` | `100` | Max changed packages listed in PR comments and job summaries |
-| `audit-existing` | `false` | Manual `workflow_dispatch` only — scan HEAD lockfile for CVEs (no diff) |
-| `artifact-name` | `lockfile-report` | Name referenced in PR comments |
-| `report-url` | *(empty)* | Explicit public report URL (overrides `pages-base-url` for links) |
-| `pages-base-url` | *(empty)* | Base URL for hosted reports; enables `report-url` output as `{base}/reports/{run-id}/` |
-| `report-manifest-path` | *(empty)* | Path to `reports/manifest.json` from a checked-out site |
-| `use-report-manifest-base` | `false` | Diff against last published report commit instead of PR base / push `before` |
-| `report-commit` | *(auto)* | Head commit SHA stored in report metadata |
-| `report-base-commit` | *(auto)* | Base commit SHA stored in report metadata (git-resolved when omitted) |
-| `report-run-id` | *(auto)* | Workflow run ID used in report URL paths |
-| `report-commit-title` | *(empty)* | Commit title shown on the reports index |
+| **Artifact only** | Simplest setup | Nothing — download from the workflow run |
+| **GitHub Pages** | Public report history, shareable links | Enable Pages (Actions source), copy [`prepare-pages-site.ts`](scripts/prepare-pages-site.ts) + [`sync-pages-site-from-live.ts`](scripts/sync-pages-site-from-live.ts), follow [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml) |
+| **Your own host** | S3, Netlify, internal CDN | Same merge scripts, then upload the site dir yourself |
 
-### Outputs
+For Pages, each run gets a URL like `https://you.github.io/your-repo/reports/<workflow-run-id>/`. The site root lists every past run. Set `pages-base-url` so PR comments link there.
 
-| Output | Description |
-| --- | --- |
-| `report-path` | Path to generated `index.html` (empty when skipped) |
-| `report-url` | Public report URL when `pages-base-url` or `report-url` is set |
-| `report-run-id` | Workflow run ID for this report |
-| `report-commit` | Head commit SHA for this report |
-| `changed-count` | Packages with version changes |
-| `red-count` | Changed packages with known CVEs |
-| `yellow-count` | Changed packages without confirmed CVEs |
-| `existing-red-count` | Existing CVEs found during `audit-existing` audit |
+**Manifest mode** (`use-report-manifest-base: true`): compare against the last *published* report, not every intermediate commit. Handy when several commits land between deploys.
 
-## GitHub Pages (this repository)
+Full reference workflows live in [`.github/workflows/`](.github/workflows/) — copy and trim rather than building from scratch here.
 
-This repo publishes a live demo via [publish-pages.yml](.github/workflows/publish-pages.yml) using [`demo/action.yml`](demo/action.yml) — a thin composite wrapper around the root action with the committed `fixtures/sample-project` lockfile pair baked in. **Consumers should use the root action only** (`@v1`); the demo action exists so fixture paths and demo-only defaults do not clutter consumer workflows.
+## Large lockfile diffs
 
-- **Index:** https://thethomaseffect.github.io/github-package-lock-analysis/
-- **Example report:** https://thethomaseffect.github.io/github-package-lock-analysis/reports/33381735935/
+A big `npm update` can touch thousands of nested packages. Each one triggers CVE and changelog lookups, so runtime grows with change count.
 
-Real lockfile analysis on PR/push uses [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml) with the root action.
-
-## Release
-
-Use the tagged action in workflows:
+The key variable is **`enrichment-limit`** (default `500`). Below that, everything gets full enrichment. Above it, the report still lists every change, but rows are ❓ **manual review** with an npm link only — no bulk API calls.
 
 ```yaml
-- uses: thethomaseffect/github-package-lock-analysis@v1
+with:
+  enrichment-limit: 2000      # raise for large monorepos
+  enrichment-concurrency: 12  # parallel lookups under the limit
 ```
+
+A few hundred changes usually finish in minutes. Thousands can take up to an hour — fine if lockfile changes are occasional.
+
+If the lockfile changes constantly (Renovate, nightly bumps), don't block merges on it. Run analysis after your main CI with `needs: ci` and `fail-on-red: false`; review the report or Pages link when you're ready.
+
+## Manual audit (optional)
+
+On `workflow_dispatch` only, you can scan the **current** lockfile for known CVEs in packages that didn't change — useful peace of mind after past incidents. Enable with `audit-existing: true`. It's slow on huge lockfiles; not for every PR.
+
+## Configuration reference
+
+### Common inputs
+
+| Input | Default | Notes |
+| --- | --- | --- |
+| `lockfile-path` | `package-lock.json` | |
+| `post-pr-comment` | `true` | |
+| `skip-if-unchanged` | `true` | |
+| `fail-on-red` | `true` | Set `false` for informational runs |
+| `enrichment-limit` | `500` | See [Large lockfile diffs](#large-lockfile-diffs) |
+| `pages-base-url` | — | Enables public report URLs in comments |
+| `use-report-manifest-base` | `false` | Diff vs last published report |
+
+[action.yml](action.yml) lists every input and output.
+
+### Permissions
+
+- **PR comment + artifact:** `contents: read`, `pull-requests: write`
+- **GitHub Pages:** also `pages: write`, `id-token: write`, Pages enabled on the repo
+
+## Development
+
+Node.js 20+.
+
+```bash
+npm install
+npm run lint
+npm test
+npm run build
+npm run test:fixtures   # hits OSV; writes fixtures/sample-project/.output/index.html
+```
+
+The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfiles are committed JSON — no `npm install` in CI.
+
+## Live demo
+
+This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1`); [`demo/action.yml`](demo/action.yml) is only for our sample-project fixtures.
 
 ## Docs
 
-- [CLAUDE.md](./CLAUDE.md) — architecture and logic for contributors
+- [CLAUDE.md](./CLAUDE.md) — architecture for contributors
 - [PROMPTS.md](./PROMPTS.md) — hackathon prompt log
 
 ## License
