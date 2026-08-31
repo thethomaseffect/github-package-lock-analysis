@@ -19,6 +19,7 @@ describe("parseLockfile", () => {
     const negotiator = parsed.packages.get(
       "node_modules/accepts/node_modules/negotiator",
     );
+    const lodash = parsed.packages.get("node_modules/cheerio/node_modules/lodash");
 
     expect(negotiator?.breadcrumb).toEqual([
       "sample-project",
@@ -27,6 +28,10 @@ describe("parseLockfile", () => {
     ]);
     expect(formatBreadcrumb(negotiator!.breadcrumb)).toBe(
       "sample-project > accepts > negotiator",
+    );
+    expect(lodash?.breadcrumb).toEqual(["sample-project", "cheerio", "lodash"]);
+    expect(formatBreadcrumb(lodash!.breadcrumb)).toBe(
+      "sample-project > cheerio > lodash",
     );
   });
 });
@@ -43,10 +48,11 @@ describe("diffLockfiles", () => {
     const changes = diffLockfiles(before, after, "sample-project");
 
     expect(changes).toHaveLength(2);
-    expect(changes[0]?.name).toBe("lodash");
-    expect(changes[0]?.depth).toBe(1);
-    expect(changes[1]?.name).toBe("negotiator");
+    expect(changes[0]?.name).toBe("negotiator");
+    expect(changes[0]?.depth).toBe(2);
+    expect(changes[1]?.name).toBe("lodash");
     expect(changes[1]?.depth).toBe(2);
+    expect(changes[1]?.breadcrumb).toEqual(["sample-project", "cheerio", "lodash"]);
   });
 });
 
@@ -59,10 +65,10 @@ describe("buildReportHtml", () => {
       yellowCount: 0,
       changes: [
         {
-          lockPath: "node_modules/lodash",
+          lockPath: "node_modules/cheerio/node_modules/lodash",
           name: "lodash",
-          breadcrumb: ["sample-project", "lodash"],
-          depth: 1,
+          breadcrumb: ["sample-project", "cheerio", "lodash"],
+          depth: 2,
           oldVersion: "4.17.21",
           newVersion: "4.17.15",
           securityLevel: "red",
@@ -80,7 +86,7 @@ describe("buildReportHtml", () => {
 
     const html = buildReportHtml(result);
 
-    expect(html).toContain("sample-project &gt; lodash");
+    expect(html).toContain("sample-project &gt; cheerio &gt; lodash");
     expect(html).toContain("Known CVE");
     expect(html).toContain("CVE-2020-8203");
   });

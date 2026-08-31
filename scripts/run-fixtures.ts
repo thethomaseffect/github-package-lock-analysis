@@ -28,6 +28,7 @@ async function main(): Promise<void> {
       oldVersion: string;
       newVersion: string;
       securityLevel: "red" | "yellow";
+      breadcrumb?: string[];
     }>;
   };
 
@@ -70,6 +71,15 @@ async function main(): Promise<void> {
     if (actual.securityLevel !== expectedChange.securityLevel) {
       throw new Error(
         `Security level mismatch for ${expectedChange.name}: expected ${expectedChange.securityLevel}, got ${actual.securityLevel}`,
+      );
+    }
+
+    if (
+      expectedChange.breadcrumb &&
+      actual.breadcrumb.join(" > ") !== expectedChange.breadcrumb.join(" > ")
+    ) {
+      throw new Error(
+        `Breadcrumb mismatch for ${expectedChange.name}: expected ${expectedChange.breadcrumb.join(" > ")}, got ${actual.breadcrumb.join(" > ")}`,
       );
     }
   }

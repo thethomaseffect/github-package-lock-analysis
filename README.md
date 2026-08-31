@@ -27,7 +27,7 @@ They rarely give you a readable audit of **every lockfile version bump** on a PR
 Paths read like a directory breadcrumb, not a tree widget:
 
 ```
-sample-project > lodash
+sample-project > cheerio > lodash
 sample-project > accepts > negotiator
 ```
 
@@ -74,7 +74,7 @@ npm run build     # Compile to dist/
 npm run test:fixtures   # Full pipeline against fixtures (hits OSV API)
 ```
 
-The fixture project uses `lodash@4.17.15` (known CVEs → red) and a nested `negotiator` downgrade (yellow). Lockfiles are committed as static JSON — **no `npm install` is run** in CI against fixture data.
+The fixture project uses `cheerio` (direct dep) whose nested `lodash@4.17.15` has known CVEs → red, plus a nested `negotiator` downgrade under `accepts` → yellow. Lockfiles are committed as static JSON — **no `npm install` is run** in CI against fixture data.
 
 After `npm run test:fixtures`, open `fixtures/sample-project/.output/index.html` to preview the report.
 
