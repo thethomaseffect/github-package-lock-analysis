@@ -1,0 +1,97 @@
+name: Lockfile Analysis
+
+on:
+  pull_request:
+    paths:
+      - package-lock.json
+  push:
+    branches: [main]
+    paths:
+      - package-lock.json
+  workflow_dispatch:
+    inputs:
+      use-fixtures:
+        description: Run against sample fixture lockfiles instead of the repo lockfile
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: lockfile-pages
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    outputs:
+      report-path: ${{ steps.resolved.outputs.report-path }}
+      changed-count: ${{ steps.resolved.outputs.changed-count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze root lockfile (git diff)
+        if: ${{ !inputs.use-fixtures }}
+        id: analysis
+        uses: ./
+        with:
+          lockfile-path: package-lock.json
+          output-dir: report-output
+          post-pr-comment: ${{ github.event_name == 'pull_request' }}
+          skip-if-unchanged: true
+
+      - name: Analyze fixture lockfiles (demo)
+        if: ${{ inputs.use-fixtures }}
+        id: analysis-fixtures
+        uses: ./
+        with:
+          old-lockfile-path: fixtures/sample-project/before/package-lock.json
+          new-lockfile-path: fixtures/sample-project/after/package-lock.json
+          output-dir: report-output
+          project-name: sample-project
+          post-pr-comment: false
+          skip-if-unchanged: false
+
+      - name: Resolve analysis outputs
+        id: resolved
+        run: |
+          if [ "${{ inputs.use-fixtures }}" = "true" ]; then
+            echo "report-path=${{ steps.analysis-fixtures.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+            echo "changed-count=${{ steps.analysis-fixtures.outputs.changed-count }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "report-path=${{ steps.analysis.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+            echo "changed-count=${{ steps.analysis.outputs.changed-count }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolved.outputs.report-path != ''
+        with:
+          name: lockfile-report
+          path: report-output/index.html
+
+  deploy-pages:
+    needs: analyze
+    if: github.ref == 'refs/heads/main' && needs.analyze.outputs.report-path != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lockfile-report
+          path: report-output
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: report-output
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

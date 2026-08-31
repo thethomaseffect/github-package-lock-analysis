@@ -1,0 +1,16 @@
+{
+  "expectedChanges": [
+    {
+      "name": "lodash",
+      "oldVersion": "4.17.21",
+      "newVersion": "4.17.15",
+      "securityLevel": "red"
+    },
+    {
+      "name": "negotiator",
+      "oldVersion": "0.6.3",
+      "newVersion": "0.6.2",
+      "securityLevel": "yellow"
+    }
+  ]
+}

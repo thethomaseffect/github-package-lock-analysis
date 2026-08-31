@@ -1,0 +1,1 @@
+{"version":3,"file":"cve.d.ts","sourceRoot":"","sources":["../../src/enrichment/cve.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,sBAAsB,CAAC;AAezD,wBAAsB,UAAU,CAC9B,WAAW,EAAE,MAAM,EACnB,OAAO,EAAE,MAAM,GACd,OAAO,CAAC,YAAY,EAAE,CAAC,CA8BzB;AA4BD,wBAAgB,aAAa,IAAI,IAAI,CAEpC"}

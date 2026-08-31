@@ -1,0 +1,66 @@
+name: Lockfile Analysis (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      lockfile-path:
+        description: Relative path to package-lock.json
+        required: false
+        type: string
+        default: package-lock.json
+      include-hackernews:
+        description: Include Hacker News enrichment
+        required: false
+        type: boolean
+        default: false
+      project-name:
+        description: Display name for breadcrumb root
+        required: false
+        type: string
+        default: ""
+      post-pr-comment:
+        description: Post PR summary comment
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      changed-count:
+        description: Number of changed packages
+        value: ${{ jobs.analyze.outputs.changed-count }}
+      red-count:
+        description: Number of red packages
+        value: ${{ jobs.analyze.outputs.red-count }}
+      yellow-count:
+        description: Number of yellow packages
+        value: ${{ jobs.analyze.outputs.yellow-count }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-count: ${{ steps.analysis.outputs.changed-count }}
+      red-count: ${{ steps.analysis.outputs.red-count }}
+      yellow-count: ${{ steps.analysis.outputs.yellow-count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze nested lockfile changes
+        id: analysis
+        uses: thethomaseffect/github-package-lock-analysis@v1
+        with:
+          lockfile-path: ${{ inputs.lockfile-path }}
+          include-hackernews: ${{ inputs.include-hackernews }}
+          project-name: ${{ inputs.project-name }}
+          post-pr-comment: ${{ inputs.post-pr-comment }}
+
+      - uses: actions/upload-artifact@v4
+        if: steps.analysis.outputs.report-path != ''
+        with:
+          name: lockfile-report
+          path: report-output/index.html

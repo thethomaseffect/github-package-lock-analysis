@@ -1,0 +1,71 @@
+name: Package Lock Analysis
+description: Diff package-lock.json changes, check CVEs, and publish a nested dependency security report
+author: github-package-lock-analysis
+
+inputs:
+  lockfile-path:
+    description: Relative path to package-lock.json in the repository
+    required: false
+    default: package-lock.json
+  old-lockfile-path:
+    description: Path to the base/previous package-lock.json (optional — auto-resolved from git on PR/push)
+    required: false
+    default: ""
+  new-lockfile-path:
+    description: Path to the updated package-lock.json (optional — defaults to workspace lockfile-path)
+    required: false
+    default: ""
+  base-ref:
+    description: Git ref for the base lockfile when auto-resolving (defaults to PR base or previous push commit)
+    required: false
+    default: ""
+  head-ref:
+    description: Git ref for the head lockfile when auto-resolving (defaults to PR head or current SHA)
+    required: false
+    default: ""
+  output-dir:
+    description: Directory where the static HTML report is written
+    required: false
+    default: report-output
+  include-hackernews:
+    description: Whether to include optional Hacker News enrichment
+    required: false
+    default: "false"
+  project-name:
+    description: Display name for the project root in breadcrumb paths
+    required: false
+    default: ""
+  skip-if-unchanged:
+    description: Skip analysis when git reports no diff for lockfile-path between base and head
+    required: false
+    default: "true"
+  post-pr-comment:
+    description: Post or update a summary comment on pull requests (requires pull_request event and GITHUB_TOKEN)
+    required: false
+    default: "true"
+  artifact-name:
+    description: Artifact name referenced in PR comments for the HTML report
+    required: false
+    default: lockfile-report
+  report-url:
+    description: Optional public URL to the HTML report (e.g. GitHub Pages) included in PR comments
+    required: false
+    default: ""
+
+outputs:
+  report-path:
+    description: Path to the generated index.html report (empty when skipped)
+  changed-count:
+    description: Number of packages with version changes
+  red-count:
+    description: Number of packages flagged with known CVEs
+  yellow-count:
+    description: Number of packages changed without confirmed CVEs
+
+runs:
+  using: node20
+  main: dist/index.js
+
+branding:
+  icon: shield
+  color: yellow

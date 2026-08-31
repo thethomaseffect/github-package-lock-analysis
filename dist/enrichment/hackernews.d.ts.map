@@ -1,0 +1,1 @@
+{"version":3,"file":"hackernews.d.ts","sourceRoot":"","sources":["../../src/enrichment/hackernews.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,mBAAmB,EAAE,MAAM,sBAAsB,CAAC;AAchE,wBAAsB,gBAAgB,CACpC,WAAW,EAAE,MAAM,EACnB,OAAO,EAAE,MAAM,GACd,OAAO,CAAC,mBAAmB,EAAE,CAAC,CAgChC;AAED,wBAAgB,oBAAoB,IAAI,IAAI,CAE3C"}
