@@ -1,3 +1,4 @@
+import { auditExistingVulnerabilities } from "./audit-existing.js";
 import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
@@ -28,12 +29,24 @@ export async function analyzeLockfileChanges(oldLockfile, newLockfile, options =
         newLockfile.packages?.[""]?.name ??
         newLockfile.name ??
         "project";
+    let existingVulnerabilities = [];
+    if (options.auditExisting) {
+        const excludeLockPaths = options.excludeLockPaths ?? new Set(changes.map((change) => change.lockPath));
+        existingVulnerabilities = await auditExistingVulnerabilities(newLockfile, {
+            projectName,
+            excludeLockPaths,
+            concurrency: options.auditConcurrency,
+        });
+    }
     return {
         projectName,
         changes,
         changedCount: changes.length,
         redCount,
         yellowCount,
+        existingVulnerabilities,
+        existingRedCount: existingVulnerabilities.length,
+        auditedExisting: options.auditExisting ?? false,
     };
 }
 //# sourceMappingURL=analyze.js.map

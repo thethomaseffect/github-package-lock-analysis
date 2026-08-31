@@ -70,6 +70,9 @@ describe("buildPullRequestComment", () => {
       changedCount: 2,
       redCount: 1,
       yellowCount: 1,
+      existingVulnerabilities: [],
+      existingRedCount: 0,
+      auditedExisting: false,
       changes: [
         {
           lockPath: "node_modules/lodash",
@@ -128,7 +131,7 @@ describe("buildPullRequestComment", () => {
     expect(formatChangeLine(result.changes[0]!)).toContain("🔴");
 
     const withUrl = buildPullRequestComment(result, "lockfile-report", "https://example.com/report");
-    expect(withUrl).toContain("[View full HTML report](https://example.com/report)");
+    expect(withUrl).toContain("[View HTML report](https://example.com/report)");
     expect(withUrl).not.toContain("workflow artifacts");
   });
 });

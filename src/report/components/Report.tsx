@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "../../lockfile/types.js";
+import { ExistingVulnerabilityRow } from "./ExistingVulnerabilityRow.js";
 import { PackageRow } from "./PackageRow.js";
 
 interface ReportProps {
@@ -16,20 +17,46 @@ export function Report({ result }: ReportProps) {
             <strong>{result.changedCount}</strong> changed
           </div>
           <div className="summary-card">
-            <strong>{result.redCount}</strong> known CVE
+            <strong>{result.redCount}</strong> CVE in changes
           </div>
           <div className="summary-card">
             <strong>{result.yellowCount}</strong> review
           </div>
+          {result.auditedExisting ? (
+            <div className="summary-card">
+              <strong>{result.existingRedCount}</strong> existing CVE
+            </div>
+          ) : null}
         </div>
       </header>
-      {result.changes.length === 0 ? (
-        <p className="empty">No package version changes detected in package-lock.json.</p>
-      ) : (
-        result.changes.map((change) => (
-          <PackageRow key={change.lockPath} change={change} />
-        ))
-      )}
+
+      <section>
+        <h2 className="section-title">Updated packages</h2>
+        {result.changes.length === 0 ? (
+          <p className="empty">No package version changes detected in package-lock.json.</p>
+        ) : (
+          result.changes.map((change) => (
+            <PackageRow key={change.lockPath} change={change} />
+          ))
+        )}
+      </section>
+
+      {result.auditedExisting ? (
+        <section>
+          <h2 className="section-title">Existing vulnerabilities</h2>
+          <p className="section-note">
+            These packages are already installed at the checked HEAD lockfile resolution. They
+            were not part of this diff but still match known CVEs.
+          </p>
+          {result.existingVulnerabilities.length === 0 ? (
+            <p className="empty">No additional known CVEs found in the current lockfile.</p>
+          ) : (
+            result.existingVulnerabilities.map((entry) => (
+              <ExistingVulnerabilityRow key={entry.lockPath} entry={entry} />
+            ))
+          )}
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -56,6 +83,14 @@ export const reportStyles = `
   h1 {
     margin: 0 0 0.5rem;
     font-size: 1.75rem;
+  }
+  .section-title {
+    margin: 2rem 0 0.75rem;
+    font-size: 1.25rem;
+  }
+  .section-note {
+    margin: 0 0 1rem;
+    color: #94a3b8;
   }
   .summary {
     display: flex;

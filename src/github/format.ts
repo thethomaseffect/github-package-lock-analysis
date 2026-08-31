@@ -11,6 +11,22 @@ export function formatChangeLine(change: PackageChange): string {
   return `${icon} \`${formatBreadcrumb(change.breadcrumb)}\` — ${versions}`;
 }
 
+export function buildWorkflowArtifactLink(
+  artifactName: string,
+  workflowRunUrl?: string,
+  reportUrl?: string,
+): string {
+  if (reportUrl) {
+    return `[View HTML report](${reportUrl}) · Download \`${artifactName}\` artifact from the [workflow run](${workflowRunUrl ?? reportUrl}).`;
+  }
+
+  if (workflowRunUrl) {
+    return `Download the **${artifactName}** artifact from this [workflow run](${workflowRunUrl}).`;
+  }
+
+  return `Download the **${artifactName}** artifact from this workflow run.`;
+}
+
 export function buildPullRequestComment(
   result: AnalysisResult,
   artifactName: string,
@@ -22,40 +38,48 @@ export function buildPullRequestComment(
     `| Metric | Count |`,
     `| --- | ---: |`,
     `| Changed packages | ${result.changedCount} |`,
-    `| Known CVE (red) | ${result.redCount} |`,
+    `| Known CVE in changes | ${result.redCount} |`,
     `| Review (yellow) | ${result.yellowCount} |`,
-    "",
   ];
 
-  if (result.changedCount === 0) {
-    lines.push("No nested dependency version changes detected in `package-lock.json`.");
-    return lines.join("\n");
+  if (result.auditedExisting) {
+    lines.push(`| Existing CVE (not in diff) | ${result.existingRedCount} |`);
   }
 
-  lines.push("### Updated packages", "");
-  for (const change of result.changes) {
-    lines.push(formatChangeLine(change));
-    if (change.cves.length > 0) {
-      lines.push(
-        `  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`,
-      );
+  lines.push("", "");
+
+  if (result.changedCount > 0) {
+    lines.push("### Updated packages", "");
+    for (const change of result.changes) {
+      lines.push(formatChangeLine(change));
+      if (change.cves.length > 0) {
+        lines.push(
+          `  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`,
+        );
+      }
+      const referenceLinks = change.references.links
+        .map((link) => `[${link.label}](${link.url})`)
+        .join(" | ");
+      if (referenceLinks) {
+        lines.push(`  - ${referenceLinks}`);
+      }
+      lines.push("");
     }
-    const referenceLinks = change.references.links
-      .map((link) => `[${link.label}](${link.url})`)
-      .join(" | ");
-    if (referenceLinks) {
-      lines.push(`  - ${referenceLinks}`);
-    }
+  } else {
+    lines.push("No nested dependency version changes detected in `package-lock.json`.", "");
+  }
+
+  if (result.auditedExisting) {
+    lines.push("### Existing vulnerabilities", "");
+    lines.push(
+      result.existingRedCount > 0
+        ? `${result.existingRedCount} installed package(s) outside the diff match known CVEs.`
+        : "No additional known CVEs found in the current lockfile outside the diff.",
+    );
     lines.push("");
   }
 
-  if (reportUrl) {
-    lines.push(`[View full HTML report](${reportUrl})`);
-  } else {
-    lines.push(
-      `Download the full HTML report from workflow artifacts (\`${artifactName}\`).`,
-    );
-  }
+  lines.push(buildWorkflowArtifactLink(artifactName, reportUrl, reportUrl));
 
   return lines.join("\n");
 }
@@ -63,9 +87,13 @@ export function buildPullRequestComment(
 export function buildSummaryRows(result: AnalysisResult): Array<[string, string]> {
   const rows: Array<[string, string]> = [
     ["Changed packages", String(result.changedCount)],
-    ["Known CVE (red)", String(result.redCount)],
+    ["Known CVE in changes", String(result.redCount)],
     ["Review (yellow)", String(result.yellowCount)],
   ];
+
+  if (result.auditedExisting) {
+    rows.push(["Existing CVE (not in diff)", String(result.existingRedCount)]);
+  }
 
   return rows;
 }

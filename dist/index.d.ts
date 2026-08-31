@@ -8,6 +8,8 @@ export interface RunActionOptions {
     includeHackerNews: boolean;
     projectName?: string;
     skipIfUnchanged: boolean;
+    auditExisting: boolean;
+    failOnRed: boolean;
     postPrComment: boolean;
     artifactName: string;
     reportUrl?: string;

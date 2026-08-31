@@ -61,15 +61,31 @@ export interface PackageChange {
   references: PackageReferences;
 }
 
+export interface ExistingVulnerability {
+  lockPath: string;
+  name: string;
+  breadcrumb: string[];
+  depth: number;
+  version: string;
+  cves: CveReference[];
+  references: PackageReferences;
+}
+
 export interface AnalysisResult {
   projectName: string;
   changes: PackageChange[];
   changedCount: number;
   redCount: number;
   yellowCount: number;
+  existingVulnerabilities: ExistingVulnerability[];
+  existingRedCount: number;
+  auditedExisting: boolean;
 }
 
 export interface AnalysisOptions {
   projectName?: string;
   includeHackerNews?: boolean;
+  auditExisting?: boolean;
+  excludeLockPaths?: Set<string>;
+  auditConcurrency?: number;
 }

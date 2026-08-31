@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      audit-existing:
+        description: Scan the full HEAD lockfile for existing CVEs outside the diff (slow)
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -36,7 +41,9 @@ jobs:
           lockfile-path: package-lock.json
           output-dir: report-output
           post-pr-comment: ${{ github.event_name == 'pull_request' }}
-          skip-if-unchanged: true
+          skip-if-unchanged: ${{ github.event_name != 'workflow_dispatch' }}
+          audit-existing: ${{ github.event_name == 'workflow_dispatch' && inputs.audit-existing }}
+          fail-on-red: true
 
       - name: Analyze fixture lockfiles (demo)
         if: ${{ inputs.use-fixtures }}
@@ -49,9 +56,21 @@ jobs:
           project-name: sample-project
           post-pr-comment: false
           skip-if-unchanged: false
+          audit-existing: ${{ inputs.audit-existing }}
+          fail-on-red: true
+
+      - name: Resolve report output
+        id: resolved
+        if: always()
+        run: |
+          if [ "${{ inputs.use-fixtures }}" = "true" ]; then
+            echo "report-path=${{ steps.analysis-fixtures.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "report-path=${{ steps.analysis.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/upload-artifact@v4
-        if: steps.analysis.outputs.report-path != '' || steps.analysis-fixtures.outputs.report-path != ''
+        if: always() && steps.resolved.outputs.report-path != ''
         with:
           name: lockfile-report
           path: report-output/index.html

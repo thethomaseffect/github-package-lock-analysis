@@ -63,6 +63,9 @@ describe("buildReportHtml", () => {
       changedCount: 1,
       redCount: 1,
       yellowCount: 0,
+      existingVulnerabilities: [],
+      existingRedCount: 0,
+      auditedExisting: false,
       changes: [
         {
           lockPath: "node_modules/cheerio/node_modules/lodash",

@@ -3,9 +3,18 @@ import { join } from "node:path";
 import { analyzeLockfileChanges } from "./analyze.js";
 import { resolveLockfiles, shouldSkipUnchangedLockfile, } from "./git/resolve-lockfiles.js";
 import { postPullRequestComment } from "./github/comment.js";
-import { buildSummaryChangeList, buildSummaryRows, } from "./github/format.js";
+import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactLink, } from "./github/format.js";
 import { readLockfileFromPath } from "./lockfile/diff.js";
 import { writeReport } from "./report/write.js";
+function buildWorkflowRunUrl() {
+    const server = process.env.GITHUB_SERVER_URL;
+    const repo = process.env.GITHUB_REPOSITORY;
+    const runId = process.env.GITHUB_RUN_ID;
+    if (!server || !repo || !runId) {
+        return undefined;
+    }
+    return `${server}/${repo}/actions/runs/${runId}`;
+}
 export async function runAction(options) {
     const tempDir = join(options.outputDir, ".tmp-lockfiles");
     const resolved = resolveLockfiles({
@@ -18,24 +27,33 @@ export async function runAction(options) {
         tempDir,
     });
     try {
-        if (shouldSkipUnchangedLockfile(options.skipIfUnchanged, resolved, options.lockfilePath, options.workspace)) {
+        const lockfileUnchanged = shouldSkipUnchangedLockfile(options.skipIfUnchanged, resolved, options.lockfilePath, options.workspace);
+        if (lockfileUnchanged && !options.auditExisting) {
             core.info(`No changes detected in ${options.lockfilePath}; skipping analysis.`);
             core.setOutput("changed-count", "0");
             core.setOutput("red-count", "0");
             core.setOutput("yellow-count", "0");
+            core.setOutput("existing-red-count", "0");
             return null;
+        }
+        if (lockfileUnchanged && options.auditExisting) {
+            core.info(`No lockfile diff detected; continuing with existing vulnerability audit on HEAD.`);
         }
         const oldLockfile = readLockfileFromPath(resolved.oldPath);
         const newLockfile = readLockfileFromPath(resolved.newPath);
         const result = await analyzeLockfileChanges(oldLockfile, newLockfile, {
             projectName: options.projectName,
             includeHackerNews: options.includeHackerNews,
+            auditExisting: options.auditExisting,
         });
         const reportPath = writeReport(result, options.outputDir);
+        const workflowRunUrl = buildWorkflowRunUrl();
+        const totalRedCount = result.redCount + result.existingRedCount;
         core.setOutput("report-path", reportPath);
         core.setOutput("changed-count", String(result.changedCount));
         core.setOutput("red-count", String(result.redCount));
         core.setOutput("yellow-count", String(result.yellowCount));
+        core.setOutput("existing-red-count", String(result.existingRedCount));
         const summary = core.summary.addHeading("Package lock analysis");
         summary.addTable([
             [{ data: "Metric", header: true }, { data: "Count", header: true }],
@@ -45,18 +63,32 @@ export async function runAction(options) {
         if (changeLines.length > 0) {
             summary.addHeading("Updated packages", 3).addList(changeLines);
         }
+        if (result.auditedExisting) {
+            summary
+                .addHeading("Existing vulnerabilities", 3)
+                .addRaw(result.existingRedCount > 0
+                ? `${result.existingRedCount} installed package(s) outside the diff match known CVEs. See the report artifact.`
+                : "No additional known CVEs found in the current lockfile outside the diff.");
+        }
+        summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactLink(options.artifactName, workflowRunUrl, options.reportUrl));
         await summary.write();
         if (options.postPrComment) {
-            await postPullRequestComment(result, options.artifactName, options.reportUrl);
+            await postPullRequestComment(result, options.artifactName, options.reportUrl ?? workflowRunUrl);
         }
-        if (result.redCount > 0) {
-            core.warning(`${result.redCount} updated package(s) match known CVEs. Review the report before merging.`);
+        if (totalRedCount > 0) {
+            core.error(`Found ${totalRedCount} package(s) with known CVEs (${result.redCount} in changes, ${result.existingRedCount} existing). Download the **${options.artifactName}** artifact from this workflow run for details.`);
         }
         else if (result.changedCount > 0) {
             core.notice(`${result.changedCount} nested package version change(s) detected. Review the report.`);
         }
+        else if (result.auditedExisting) {
+            core.info("Existing vulnerability audit completed with no known CVEs found.");
+        }
         else {
             core.info("No package-lock.json version changes detected.");
+        }
+        if (options.failOnRed && totalRedCount > 0) {
+            core.setFailed(`Found ${totalRedCount} package(s) with known CVEs. Download the ${options.artifactName} artifact from this workflow run to review the full report.`);
         }
         return reportPath;
     }
@@ -75,6 +107,8 @@ async function main() {
         const includeHackerNews = core.getBooleanInput("include-hackernews");
         const projectName = core.getInput("project-name") || undefined;
         const skipIfUnchanged = core.getBooleanInput("skip-if-unchanged");
+        const auditExisting = core.getBooleanInput("audit-existing");
+        const failOnRed = core.getBooleanInput("fail-on-red");
         const postPrComment = core.getBooleanInput("post-pr-comment");
         const artifactName = core.getInput("artifact-name") || "lockfile-report";
         const reportUrl = core.getInput("report-url") || undefined;
@@ -89,6 +123,8 @@ async function main() {
             includeHackerNews,
             projectName,
             skipIfUnchanged,
+            auditExisting,
+            failOnRed,
             postPrComment,
             artifactName,
             reportUrl,

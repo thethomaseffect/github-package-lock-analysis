@@ -51,6 +51,14 @@ inputs:
     description: Optional public URL to the HTML report (e.g. GitHub Pages) included in PR comments
     required: false
     default: ""
+  audit-existing:
+    description: Scan the full HEAD lockfile for known CVEs outside the diff (slow; intended for manual runs)
+    required: false
+    default: "false"
+  fail-on-red:
+    description: Fail the action when known CVEs are found in changes or existing vulnerability audit
+    required: false
+    default: "true"
 
 outputs:
   report-path:
@@ -58,9 +66,11 @@ outputs:
   changed-count:
     description: Number of packages with version changes
   red-count:
-    description: Number of packages flagged with known CVEs
+    description: Number of changed packages flagged with known CVEs
   yellow-count:
     description: Number of packages changed without confirmed CVEs
+  existing-red-count:
+    description: Number of unchanged installed packages flagged with known CVEs during audit-existing
 
 runs:
   using: node20
