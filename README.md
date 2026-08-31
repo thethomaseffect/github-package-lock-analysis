@@ -142,10 +142,10 @@ Node.js 20+.
 ```bash
 npm install
 npm run lint
-npm test
+npm test                  # unit tests, offline
 npm run build
-npm run test:fixtures   # hits OSV; writes fixtures/sample-project/.output/index.html
-npm run test:baseline   # diff-only; writes fixtures/sample-project/.output-baseline/index.html
+npm run test:fixtures     # integration run; network required (OSV)
+npm run test:baseline     # baseline fixture run, offline
 ```
 
 The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfiles are committed JSON — no `npm install` in CI.

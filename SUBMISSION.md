@@ -39,21 +39,21 @@ The hackathon requires both. I implemented them as two runnable paths on the sam
 
 ## Reproduction guide (clean environment)
 
-**Requirements:** Node.js 20+, git, network (advanced path calls OSV/npm).
+**Requirements:** Node.js 20+, git. Network required only for `npm run test:fixtures` (live OSV/npm lookups).
 
 ```bash
 git clone https://github.com/thethomaseffect/github-package-lock-analysis.git
 cd github-package-lock-analysis
 npm ci
 
-# Unit tests (no network for most tests)
+# Unit tests (offline — HTTP/CVE calls mocked)
 npm test
 
-# Baseline — diff-only report (~1s, offline after clone)
+# Baseline — diff-only fixture run (~1s, offline)
 npm run test:baseline
 # Open fixtures/sample-project/.output-baseline/index.html
 
-# Advanced — full enrichment + fixture assertions (calls OSV)
+# Advanced — integration fixture run (network required; calls OSV)
 npm run test:fixtures
 # Open fixtures/sample-project/.output/index.html
 
@@ -151,7 +151,7 @@ Before **Aug 31, 18:00 UTC** ([challenge page](https://www.hackerearth.com/commu
 
 | Criterion | Evidence |
 | --- | --- |
-| **Reproducibility** | Single-command setup (`npm ci`), scripted baseline/advanced runs, CI green, committed fixture lockfiles (no install) |
+| **Reproducibility** | Single-command setup (`npm ci`), offline unit tests + baseline fixture run, integration fixture run with live OSV, CI green, committed lockfiles (no install) |
 | **Agent solution & engineering** | Full Action + Pages + manifest; [PROMPTS.md](./PROMPTS.md) documents agent-driven iteration |
 | **Measured improvement** | Baseline vs advanced on same fixture; red CVE only after enrichment |
 | **End-to-end quality** | Live Pages demo, `@v1` tag, consumer README, 38 unit tests |

@@ -27,9 +27,9 @@ Judges can verify outputs without the agent:
 
 ```bash
 npm ci
-npm test
-npm run test:baseline    # baseline path
-npm run test:fixtures    # advanced path
+npm test                 # unit tests, offline
+npm run test:baseline    # baseline fixture run, offline
+npm run test:fixtures    # integration fixture run, network required
 ```
 
 See [SUBMISSION.md](../SUBMISSION.md) for the full reproduction guide and baseline vs advanced comparison.
