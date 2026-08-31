@@ -1,6 +1,6 @@
 # PROMPTS.md
 
-Hackathon log of **prompt summaries** between local commits. Entries are not verbatim prompts — they capture intent and scope so we can trace how the project evolved.
+Hackathon log of **prompt summaries** between local commits. Entries are not verbatim prompts — they capture intent and scope to trace how the project evolved.
 
 ## How to use this file
 
@@ -111,6 +111,36 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 **Scope:** `SUBMISSION.md`, `docs/AGENT_TRAJECTORIES.md`, `scripts/run-baseline.ts`, `README.md` hackathon section, `package.json` `test:baseline`.
 
 **Outcome:** Judges can run baseline (yellow-only, offline) vs advanced (`test:fixtures`, red lodash) on the same fixture.
+
+---
+
+## 2026-08-31 — README simplification & PROMPTS catch-up
+
+**Summary:** Simplify consumer-facing README (setup tiers, tone). Backfill PROMPTS.md entries for session history through v1 release.
+
+**Scope:** `README.md`, `PROMPTS.md`.
+
+**Outcome:** `40a8f40`, `956e1ff`.
+
+---
+
+## 2026-08-31 — Submission doc polish
+
+**Summary:** First-person voice in SUBMISSION.md; clarify unit vs integration test network requirements; remove personal checklists/video outline from judge-facing SUBMISSION.md (kept in local notes).
+
+**Scope:** `SUBMISSION.md`, `README.md`, `docs/AGENT_TRAJECTORIES.md`, `PROMPTS.md`.
+
+**Outcome:** `6f31d45`, `4845da9`, `2938045`.
+
+---
+
+## 2026-08-31 — Sync docs with codebase
+
+**Summary:** Refresh CLAUDE.md architecture and classification tables; update SUBMISSION example report URL; add `test:baseline` CI job; align README dev commands with `npm ci`.
+
+**Scope:** `CLAUDE.md`, `SUBMISSION.md`, `README.md`, `PROMPTS.md`, `.github/workflows/ci.yml`.
+
+**Outcome:** Docs match current modules, manual-review mode, node24 action runtime, and offline baseline CI.
 
 ---
 

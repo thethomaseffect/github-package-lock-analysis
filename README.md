@@ -125,6 +125,8 @@ On `workflow_dispatch` only, you can scan the **current** lockfile for known CVE
 | `skip-if-unchanged` | `true` | |
 | `fail-on-red` | `true` | Set `false` for informational runs |
 | `enrichment-limit` | `500` | See [Large lockfile diffs](#large-lockfile-diffs) |
+| `summary-list-limit` | `100` | Max rows in PR comment / job summary |
+| `audit-existing` | `false` | HEAD lockfile CVE scan (`workflow_dispatch` only) |
 | `pages-base-url` | — | Enables public report URLs in comments |
 | `use-report-manifest-base` | `false` | Diff vs last published report |
 
@@ -140,7 +142,7 @@ On `workflow_dispatch` only, you can scan the **current** lockfile for known CVE
 Node.js 20+.
 
 ```bash
-npm install
+npm ci
 npm run lint
 npm test                  # unit tests, offline
 npm run build

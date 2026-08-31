@@ -6,7 +6,7 @@ Submission for the [micro1 Frontier Engineering Challenge 2026](https://www.hack
 | --- | --- |
 | **Repository** | https://github.com/thethomaseffect/github-package-lock-analysis |
 | **Live demo (Pages index)** | https://thethomaseffect.github.io/github-package-lock-analysis/ |
-| **Example report** | https://thethomaseffect.github.io/github-package-lock-analysis/reports/33384664174/ |
+| **Example report** | https://thethomaseffect.github.io/github-package-lock-analysis/reports/33384778428/ |
 | **Action (consumers)** | `thethomaseffect/github-package-lock-analysis@v1` |
 
 ---
@@ -64,6 +64,8 @@ npm run build
 **Expected fixture results (advanced):** 2 changed packages, 1 red, 1 yellow. Breadcrumb `sample-project > cheerio > lodash` shows CVE links.
 
 **GitHub Action smoke:** CI job `action-smoke` in [.github/workflows/ci.yml](.github/workflows/ci.yml) runs the demo action against fixtures on every push.
+
+**Baseline in CI:** Job `baseline` runs `npm run test:baseline` (offline) on every push.
 
 **Pages demo:** [.github/workflows/publish-pages.yml](.github/workflows/publish-pages.yml) deploys the fixture report; each run appends to the public index.
 

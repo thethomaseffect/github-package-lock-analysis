@@ -23,16 +23,16 @@ This GitHub Action closes that gap by diffing lockfile changes, enriching every 
                     ▼
 ┌─────────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
 │ Query CVE database  │────▶│ Changelog / npm refs │────▶│ Build static React  │
-│ (e.g. OSV / NVD)    │     │                      │     │ report page         │
+│ (OSV → NVD links)   │     │                      │     │ report page         │
 └─────────────────────┘     └──────────────────────┘     └─────────────────────┘
 ```
 
 1. **Trigger** — Runs in GitHub Actions when `package-lock.json` changes (typically on pull requests).
-2. **Diff** — Compare the previous lockfile (base branch or prior commit) with the current one.
+2. **Diff** — Compare the previous lockfile (PR base, prior push commit, or manifest last-published commit) with the current one.
 3. **Extract changes** — For every package whose resolved version changed, record: name, old version, new version, and dependency path from root.
-4. **Enrich** — Look up CVEs for the package/version range and resolve changelog/npm links.
-5. **Report** — Generate a static HTML page (React, built to static assets) and publish it as a workflow artifact or GitHub Pages deployment.
-6. **Cleanup** — Temporary files and test fixtures are created dynamically and removed after the run; no `npm install` is executed against malicious lockfile data in production flows.
+4. **Enrich** — Look up CVEs via OSV and resolve npm/changelog/GitHub reference links (skipped above `enrichment-limit`).
+5. **Report** — Generate static HTML (React SSR), optional PR comment + job summary, artifact and/or GitHub Pages.
+6. **Safety** — Parsing is read-only JSON; no `npm install` on untrusted lockfiles in production flows.
 
 ## Core logic
 
@@ -41,66 +41,70 @@ This GitHub Action closes that gap by diffing lockfile changes, enriching every 
 - Input: two `package-lock.json` files (before/after).
 - Support npm lockfile v2/v3 semantics (`packages` map with `node_modules/` paths).
 - A **change** is any entry where the resolved `version` string differs between old and new lockfiles.
-- Ignore unchanged packages entirely in the output — the report is intentionally minimal.
+- Ignore unchanged packages in the diff report — output is intentionally minimal.
+- `toUnenrichedChanges()` in `diff.ts` supports the hackathon **baseline** path (yellow-only, no HTTP).
 
 ### Dependency path presentation
 
 Do **not** render a collapsible tree. Present paths like a filesystem breadcrumb:
 
 ```
-my-app > lodash > some-nested-pkg
-my-app > @scope/pkg > deep-dep
+my-app > cheerio > lodash
+my-app > accepts > negotiator
 ```
 
 Rules:
 
-- Start from the project root (top-level / direct deps first in sort order).
+- Start from the project root; sort shallow paths before deep nested paths.
 - Only show paths that contain at least one updated package.
-- If multiple paths share a prefix, group visually but keep each changed leaf identifiable.
 
 ### Security classification
 
-| Signal | UI colour | Meaning |
-|--------|-----------|---------|
-| CVE match (NVD or equivalent) for affected version range | **Red** | High likelihood of known security issues |
-| Version changed, no confirmed CVE | **Yellow** | Changed and worth human review |
-| Unchanged | *(hidden)* | Not shown in report |
+| Signal | UI | Meaning |
+|--------|-----|---------|
+| CVE match (OSV/NVD) for affected version | **Red** | Known vulnerability metadata for this package/version |
+| Version changed, no confirmed CVE | **Yellow** | Supply-chain surface changed; review changelogs |
+| Above `enrichment-limit` changed packages | **❓ Manual review** | Diff only; npm link, no bulk CVE/changelog HTTP |
+| Unchanged in diff | *(hidden)* | Not listed in changed-packages section |
+| `audit-existing` on HEAD lockfile | **Existing vulnerabilities** section | Separate slow scan of unchanged installed packages |
 
-CVE links should point to authoritative records, e.g. [CVE-2020-25268 on NVD](https://nvd.nist.gov/vuln/detail/CVE-2020-25268).
-
-Red does not mean "definitely exploited" — it means "known vulnerability metadata exists for this package/version context." Yellow means "supply-chain surface changed; review changelogs."
+Red does not mean "definitely exploited." Yellow and manual-review rows still warrant human review.
 
 ### Changelog links
 
-For each updated package, include a **best-effort changelog URL**:
+Best-effort per changed package: npm version page, GitHub releases/tags/changelog anchors, commit blob links when inferrable from registry metadata.
 
-- npm package page
-- GitHub releases/tags for inferred repository
-- Fallback: search link if canonical changelog unknown
-
-Links are hints for reviewers, not guarantees.
-
-## Architecture (intended)
+## Architecture
 
 ```
 /
-├── action.yml              # GitHub Action metadata & entrypoint
+├── action.yml                 # Consumer GitHub Action (node24)
+├── demo/action.yml            # Composite wrapper for fixture demo only
 ├── src/
-│   ├── index.ts            # Action entry: orchestration
-│   ├── lockfile/
-│   │   ├── parse.ts        # Parse package-lock.json
-│   │   ├── diff.ts         # Compute version changes + paths
-│   │   └── types.ts
-│   ├── enrichment/
-│   │   ├── cve.ts          # NVD / OSV queries
-│   │   └── changelog.ts    # Changelog / npm links
+│   ├── index.ts               # Action orchestration
+│   ├── analyze.ts             # Diff + enrich + enrichment-limit logic
+│   ├── audit-existing.ts      # Optional HEAD lockfile CVE scan
+│   ├── concurrency.ts         # Bounded parallel enrichment
+│   ├── manual-review.ts       # Manual-review badge copy
+│   ├── run-mode.ts            # Explicit paths vs git auto-resolve
+│   ├── report-manifest.ts     # Pages index HTML + manifest merge
+│   ├── report-meta.ts         # Per-run report metadata sidecar
+│   ├── lockfile/              # parse, diff, types
+│   ├── enrichment/            # cve (OSV), changelog, minimal-references, urls
+│   ├── git/                   # resolve-lockfiles, manifest base commit
+│   ├── github/                # PR comments, job summary formatting
 │   └── report/
-│       ├── build.tsx       # React report generator
-│       └── components/     # Functional React components
-├── fixtures/               # Local test lockfile pairs (safe, no install)
-│   └── sample-project/     # Mini project for manual/CI testing
-├── dist/                   # Compiled action + static report output (gitignored)
-└── CLAUDE.md
+│       ├── build.tsx          # renderToStaticMarkup entry
+│       ├── write.ts           # Write index.html to disk
+│       └── components/        # Report, PackageRow, ExistingVulnerabilityRow
+├── scripts/
+│   ├── run-fixtures.ts        # Advanced integration run (network)
+│   ├── run-baseline.ts        # Baseline diff-only run (offline)
+│   ├── prepare-pages-site.ts  # Merge report into Pages site dir
+│   └── sync-pages-site-from-live.ts  # Pull live Pages before deploy (history retention)
+├── fixtures/sample-project/   # before/after lockfiles + expected.json
+├── tests/                     # Vitest unit tests (HTTP mocked)
+└── dist/bundle/               # ncc bundle committed for @v1 consumers
 ```
 
 ### Technology choices
@@ -108,50 +112,58 @@ Links are hints for reviewers, not guarantees.
 | Concern | Choice |
 |---------|--------|
 | Language | TypeScript |
-| Runtime | Node.js (GitHub Actions `ubuntu-latest`) |
-| Report UI | React (functional components), compiled to static HTML |
-| Target platform | GitHub Actions only (not a general CLI product) |
+| Action runtime | Node 24 (`action.yml` `runs.using: node24`) |
+| Dev / CI runtime | Node 20+ |
+| Report UI | React functional components → static HTML via `renderToStaticMarkup` |
+| Target platform | GitHub Actions (not a general CLI product) |
 
 ### GitHub Action behaviour
 
-- Inputs: paths to old/new lockfiles (or let action fetch base/head from git), enrichment limits, output directory.
-- Outputs: path to generated report, summary counts (changed packages, red/yellow counts).
-- Permissions: `contents: read` minimum; optional `pages: write` if publishing.
+Key inputs beyond lockfile paths: `skip-if-unchanged`, `post-pr-comment`, `fail-on-red` (default true), `enrichment-limit` / `enrichment-concurrency`, `pages-base-url`, `use-report-manifest-base`, `report-manifest-path`, `audit-existing` (workflow_dispatch only), `summary-list-limit`.
+
+Outputs: `report-path`, `report-url`, counts (`changed-count`, `red-count`, `yellow-count`, `existing-red-count`), `report-commit`, `report-run-id`.
+
+Permissions: `contents: read` minimum; `pull-requests: write` for comments; `pages: write` + `id-token: write` for Pages publishing.
 
 ## Report UI requirements
 
 - Static site — no client-side server; works from artifact zip or GitHub Pages.
-- List updated packages sorted with **top-level / shallow paths first**, then deeper nested paths.
-- Each row: breadcrumb path, old → new version, colour badge, CVE links (if any), changelog link.
-- Accessible contrast for red/yellow states; do not rely on colour alone (icons or labels).
+- Changed packages sorted shallow-first; breadcrumb, version arrow, badge, CVE + reference links.
+- Accessible contrast; badges use labels/icons, not colour alone.
+- Reports index at site root lists every workflow run; each report links back to index.
 
 ## Local testing strategy
 
-Because lockfiles and reports are **generated and discarded** without running installs against untrusted resolution graphs in CI:
+Committed fixture lockfiles only — no `npm install` in CI:
 
-1. **`fixtures/sample-project/`** — Small nested `package.json` + paired lockfiles (`before/` and `after/`) committed to the repo.
-2. **Historically problematic versions** — Prefer packages with well-documented CVEs (e.g. older `lodash`, `minimist`, `node-forge`) in fixture data only; pin exact versions in fixture lockfiles manually or via one-time local generation that is then committed.
-3. **Script** — `npm run test:fixtures` (or similar) runs diff + enrichment + report build against fixtures and asserts expected red/yellow classifications.
-4. **Action dry-run** — `act` or a workflow_dispatch job that points at fixture paths.
+| Command | Type | Network |
+|---------|------|---------|
+| `npm test` | Unit tests (38); fetch/CVE mocked | Offline |
+| `npm run test:baseline` | Baseline fixture run | Offline |
+| `npm run test:fixtures` | Advanced fixture run + assertions | OSV/npm |
 
-Never commit live malware samples. Use known CVE-affected versions for red-path testing.
+Fixture `sample-project`: nested `lodash@4.17.15` (red when enriched), `negotiator` (yellow). CI runs all three test paths plus `action-smoke` via `demo/action.yml`.
+
+Never commit live malware samples. Use known CVE-affected versions in fixtures only.
 
 ## Security & safety notes
 
 - Parsing lockfiles is read-only JSON — low risk.
-- CVE and changelog calls are outbound HTTP — rate-limit and cache responses within a single workflow run.
-- Do not execute postinstall scripts or `npm ci` on PR lockfiles in untrusted forks without explicit opt-in.
+- CVE and changelog calls are outbound HTTP — cache within a run; bound concurrency; skip entirely above `enrichment-limit`.
+- Do not execute postinstall scripts or `npm ci` on PR lockfiles from untrusted forks without explicit opt-in.
 - Sanitize package names before embedding in HTML report.
 
 ## Out of scope (for now)
 
 - Yarn Berry / pnpm lockfiles (npm `package-lock.json` first)
-- Automatic PR blocking / policy gates (report-only)
 - Private registry authentication beyond what GitHub Actions already provides
+- Hacker News enrichment (removed — stale/noisy for version-specific review)
+
+Policy gates are opt-in: `fail-on-red: false` for informational runs; default fails when CVEs are found.
 
 ## Conventions for contributors
 
 - Functional React components; no class components.
 - Strict TypeScript; explicit types for lockfile and report models.
 - Small, testable modules: parse → diff → enrich → render.
-- User-facing docs in README; AI/session context in this file; hackathon prompt log in PROMPTS.md.
+- User-facing docs in README; hackathon judge package in SUBMISSION.md; prompt log in PROMPTS.md; AI context in this file.

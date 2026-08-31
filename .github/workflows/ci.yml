@@ -34,6 +34,19 @@ jobs:
       - run: npm ci
       - run: npm run test:fixtures
 
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run test:baseline
+
   action-smoke:
     runs-on: ubuntu-latest
     steps:
