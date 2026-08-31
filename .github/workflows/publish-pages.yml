@@ -32,11 +32,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Checkout existing GitHub Pages site
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages-site
-        continue-on-error: true
+        id: pages-site
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
+            git fetch --depth=1 origin gh-pages
+            git worktree add gh-pages-site FETCH_HEAD
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            mkdir -p gh-pages-site/reports
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Initialize pages site directory
         run: mkdir -p gh-pages-site/reports

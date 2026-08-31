@@ -107,7 +107,7 @@ outputs:
     description: Number of unchanged installed packages flagged with known CVEs during audit-existing
 
 runs:
-  using: node20
+  using: node24
   main: dist/bundle/index.js
 
 branding:

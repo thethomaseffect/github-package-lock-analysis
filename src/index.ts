@@ -158,9 +158,13 @@ async function publishResult(
   }
 
   if (totalRedCount > 0) {
-    core.error(
-      `Found ${totalRedCount} package(s) with known CVEs (${result.redCount} in changes, ${result.existingRedCount} existing). Download the **${options.artifactName}** artifact from this workflow run for details.`,
-    );
+    const cveMessage = `Found ${totalRedCount} package(s) with known CVEs (${result.redCount} in changes, ${result.existingRedCount} existing). Download the **${options.artifactName}** artifact from this workflow run for details.`;
+
+    if (options.failOnRed) {
+      core.error(cveMessage);
+    } else {
+      core.warning(cveMessage);
+    }
   } else if (result.changedCount > 0) {
     core.notice(
       `${result.changedCount} nested package version change(s) detected. Review the report.`,
