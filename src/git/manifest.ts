@@ -34,3 +34,17 @@ export function readReportManifest(manifestPath: string): ReportManifest | null 
     return createEmptyManifest();
   }
 }
+
+export function resolveGitSha(ref: string, workspace: string): string | undefined {
+  try {
+    const sha = execFileSync("git", ["rev-parse", ref], {
+      cwd: workspace,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+
+    return sha || undefined;
+  } catch {
+    return undefined;
+  }
+}

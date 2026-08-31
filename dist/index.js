@@ -7,7 +7,8 @@ import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactSummaryH
 import { readLockfileFromPath } from "./lockfile/diff.js";
 import { hasExplicitLockfilePaths, resolveAuditExisting, } from "./run-mode.js";
 import { writeReport } from "./report/write.js";
-import { buildReportPageUrl } from "./report-manifest.js";
+import { buildReportPageUrl, isGitCommitSha } from "./report-manifest.js";
+import { resolveGitSha } from "./git/manifest.js";
 import { writeReportMeta } from "./report-meta.js";
 function resolveReportCommit(options) {
     return (options.reportCommit ??
@@ -36,14 +37,24 @@ function buildWorkflowRunUrl() {
     }
     return `${server}/${repo}/actions/runs/${runId}`;
 }
+function normalizeStoredCommit(ref, workspace) {
+    if (!ref) {
+        return undefined;
+    }
+    if (isGitCommitSha(ref)) {
+        return ref;
+    }
+    return resolveGitSha(ref, workspace);
+}
 async function publishResult(result, options, reportPath, reportCommit, reportRunId, baseCommit) {
     const workflowRunUrl = buildWorkflowRunUrl();
     const totalRedCount = result.redCount + result.existingRedCount;
     const reportUrl = resolveReportUrl(options, reportRunId);
-    const resolvedBaseCommit = options.reportBaseCommit ?? baseCommit;
+    const resolvedBaseCommit = normalizeStoredCommit(options.reportBaseCommit ?? baseCommit, options.workspace);
+    const storedCommit = normalizeStoredCommit(reportCommit, options.workspace) ?? reportCommit;
     writeReportMeta(options.outputDir, {
         runId: reportRunId,
-        commit: reportCommit,
+        commit: storedCommit,
         baseCommit: resolvedBaseCommit,
         commitTitle: options.reportCommitTitle ?? "",
         changedCount: result.changedCount,

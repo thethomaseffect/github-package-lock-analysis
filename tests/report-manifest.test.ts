@@ -4,6 +4,7 @@ import {
   buildContentsIndexHtml,
   buildReportPageUrl,
   createEmptyManifest,
+  isGitCommitSha,
   mergeReportEntries,
   resolveManifestBaseRef,
   upsertReportEntry,
@@ -140,13 +141,20 @@ describe("report manifest", () => {
     expect(merged[1]?.runId).toBe("222");
   });
 
-  it("shows a single commit link when no base commit is recorded", () => {
+  it("does not link symbolic refs like HEAD~1 on the index", () => {
     const html = buildContentsIndexHtml({
-      latestReportCommit: "abc123",
-      reports: [sampleEntry({ commit: "abc123def456" })],
+      latestReportCommit: "abc123def456",
+      reports: [
+        sampleEntry({
+          commit: "abc123def456",
+          baseCommit: "HEAD~1",
+        }),
+      ],
     }, "https://github.com/org/repo");
 
-    expect(html).not.toContain('class="commit-range"');
+    expect(html).not.toContain("/commit/HEAD~1");
     expect(html).toContain("https://github.com/org/repo/commit/abc123def456");
+    expect(isGitCommitSha("HEAD~1")).toBe(false);
+    expect(isGitCommitSha("abc123def456")).toBe(true);
   });
 });

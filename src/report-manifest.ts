@@ -87,6 +87,10 @@ export function buildReportPageUrl(pagesBaseUrl: string, runId: string): string 
   return `${base}/reports/${runId}/`;
 }
 
+export function isGitCommitSha(value: string): boolean {
+  return /^[0-9a-f]{7,40}$/i.test(value);
+}
+
 export function resolveManifestBaseRef(
   manifest: ReportManifest | null,
   headRef: string,
@@ -200,18 +204,24 @@ function buildCommitRangeLinks(
   baseCommit: string | undefined,
   commit: string,
 ): string {
-  const headShort = commit.slice(0, 12);
+  const headSha = isGitCommitSha(commit) ? commit : undefined;
+  const headShort = (headSha ?? commit).slice(0, 12);
   const headLink =
-    repositoryUrl && commit
-      ? buildExternalLink(`${repositoryUrl}/commit/${commit}`, headShort)
+    repositoryUrl && headSha
+      ? buildExternalLink(`${repositoryUrl}/commit/${headSha}`, headShort)
       : escapeHtml(headShort);
 
-  if (!baseCommit || baseCommit === commit || !repositoryUrl) {
+  const baseSha =
+    baseCommit && isGitCommitSha(baseCommit) && baseCommit !== headSha
+      ? baseCommit
+      : undefined;
+
+  if (!baseSha || !repositoryUrl) {
     return headLink;
   }
 
-  const baseShort = baseCommit.slice(0, 12);
-  const baseLink = buildExternalLink(`${repositoryUrl}/commit/${baseCommit}`, baseShort);
+  const baseShort = baseSha.slice(0, 12);
+  const baseLink = buildExternalLink(`${repositoryUrl}/commit/${baseSha}`, baseShort);
 
   return `<span class="commit-range">${baseLink}<span class="commit-arrow" aria-hidden="true">→</span>${headLink}</span>`;
 }

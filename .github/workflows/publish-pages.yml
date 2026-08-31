@@ -10,6 +10,11 @@ on:
     paths:
       - .github/workflows/publish-pages.yml
       - fixtures/sample-project/**
+      - scripts/seed-demo-reports.ts
+      - scripts/prepare-pages-site.ts
+      - src/report-manifest.ts
+      - src/report-meta.ts
+      - src/git/manifest.ts
       - action.yml
       - dist/bundle/**
 
@@ -30,6 +35,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Checkout existing GitHub Pages site
         id: pages-site
@@ -54,7 +61,7 @@ jobs:
             git log -1 --format=%s
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-          echo "base=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
+          echo "base=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build fixture report
         id: demo
@@ -71,6 +78,14 @@ jobs:
           report-commit: ${{ github.sha }}
           report-base-commit: ${{ steps.commit-meta.outputs.base }}
           report-commit-title: ${{ steps.commit-meta.outputs.title }}
+
+      - name: Seed sample demo history
+        run: |
+          npx tsx scripts/seed-demo-reports.ts \
+            --site-dir gh-pages-site \
+            --report-file report-output/index.html \
+            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
+            --repository-url "https://github.com/${{ github.repository }}"
 
       - name: Merge report into GitHub Pages site
         run: |

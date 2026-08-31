@@ -24,4 +24,17 @@ export function readReportManifest(manifestPath) {
         return createEmptyManifest();
     }
 }
+export function resolveGitSha(ref, workspace) {
+    try {
+        const sha = execFileSync("git", ["rev-parse", ref], {
+            cwd: workspace,
+            encoding: "utf8",
+            stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
+        return sha || undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 //# sourceMappingURL=manifest.js.map
