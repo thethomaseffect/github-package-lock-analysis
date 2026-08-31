@@ -107,19 +107,6 @@ Agent instructions that shaped the project: [CLAUDE.md](./CLAUDE.md) (repository
 
 ---
 
-## Solution video (≤ 5 minutes) — outline
-
-Record and upload separately on HackerEarth. Suggested flow:
-
-1. **Problem** (30s) — nested lockfile changes vs `package.json`-only scanning
-2. **Baseline** (45s) — run `npm run test:baseline`, show yellow-only report
-3. **Advanced** (90s) — run `npm run test:fixtures` or open live demo; show red lodash under cheerio, CVE links, index with multiple runs
-4. **CI** (45s) — point at workflow + PR comment / artifact
-5. **Changelog** (30s) — one advanced feature that mattered most (e.g. nested path + CVE on transitive dep)
-6. **Limitations** (30s) — npm lockfiles only; enrichment can be slow; OSV coverage gaps
-
----
-
 ## Known limitations (intentional scope)
 
 - **npm `package-lock.json` only** — not Yarn Berry or pnpm
@@ -131,22 +118,6 @@ Record and upload separately on HackerEarth. Suggested flow:
 
 ---
 
-## Submission checklist (HackerEarth)
-
-Before **Aug 31, 18:00 UTC** ([challenge page](https://www.hackerearth.com/community/challenges/hackathon/micro1-frontier-engineering-challenge-2026/)):
-
-- [ ] Register on HackerEarth (if not already)
-- [ ] Submit **repository URL** (public)
-- [ ] Confirm README + this file are on default branch
-- [ ] Upload **solution video** (≤ 5 min)
-- [ ] Attach **agent trajectories** (PROMPTS.md + export or summary)
-- [ ] Verify `npm ci && npm test && npm run test:baseline && npm run test:fixtures` on a clean machine
-- [ ] Optional: link live demo in submission notes
-
-**Contact (organizers):** yeison@micro1.ai
-
----
-
 ## Mapping to evaluation criteria
 
 | Criterion | Evidence |
@@ -155,5 +126,3 @@ Before **Aug 31, 18:00 UTC** ([challenge page](https://www.hackerearth.com/commu
 | **Agent solution & engineering** | Full Action + Pages + manifest; [PROMPTS.md](./PROMPTS.md) documents agent-driven iteration |
 | **Measured improvement** | Baseline vs advanced on same fixture; red CVE only after enrichment |
 | **End-to-end quality** | Live Pages demo, `@v1` tag, consumer README, 38 unit tests |
-
-Good luck — and if something fails during judge reproduction, open an issue on the repo.

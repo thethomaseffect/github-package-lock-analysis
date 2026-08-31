@@ -110,7 +110,7 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 
 **Scope:** `SUBMISSION.md`, `docs/AGENT_TRAJECTORIES.md`, `scripts/run-baseline.ts`, `README.md` hackathon section, `package.json` `test:baseline`.
 
-**Outcome:** Judges can run baseline (yellow-only, offline) vs advanced (`test:fixtures`, red lodash) on the same fixture. User still records ≤5 min solution video and submits on HackerEarth before Aug 31 18:00 UTC.
+**Outcome:** Judges can run baseline (yellow-only, offline) vs advanced (`test:fixtures`, red lodash) on the same fixture.
 
 ---
 
