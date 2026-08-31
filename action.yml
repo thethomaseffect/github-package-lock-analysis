@@ -64,7 +64,7 @@ outputs:
 
 runs:
   using: node20
-  main: dist/index.js
+  main: dist/bundle/index.js
 
 branding:
   icon: shield
