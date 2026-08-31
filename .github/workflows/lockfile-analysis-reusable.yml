@@ -46,7 +46,7 @@ jobs:
       red-count: ${{ steps.analysis.outputs.red-count }}
       yellow-count: ${{ steps.analysis.outputs.yellow-count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -59,7 +59,7 @@ jobs:
           project-name: ${{ inputs.project-name }}
           post-pr-comment: ${{ inputs.post-pr-comment }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: steps.analysis.outputs.report-path != ''
         with:
           name: lockfile-report

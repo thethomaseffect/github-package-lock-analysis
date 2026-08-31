@@ -123,7 +123,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -134,7 +134,7 @@ jobs:
           post-pr-comment: true
           fail-on-red: true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: steps.analysis.outputs.report-path != ''
         with:
           name: lockfile-report
@@ -200,7 +200,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -239,7 +239,7 @@ jobs:
           report-commit: ${{ steps.report-commit.outputs.sha }}
           report-commit-title: ${{ steps.report-commit.outputs.title }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: steps.analysis.outputs.report-path != ''
         with:
           name: lockfile-report
@@ -255,14 +255,14 @@ jobs:
             --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
             --repository-url "https://github.com/${{ github.repository }}"
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: steps.analysis.outputs.report-path != ''
         with:
           path: gh-pages-site
 
       - id: deployment
         if: steps.analysis.outputs.report-path != ''
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 ```
 
 **Example URLs** (replace owner/repo):

@@ -38,7 +38,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -118,7 +118,7 @@ jobs:
             echo "report-url=${{ steps.analysis.outputs.report-url }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always() && steps.resolved.outputs.report-path != ''
         with:
           name: lockfile-report
@@ -134,11 +134,11 @@ jobs:
             --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
             --repository-url "https://github.com/${{ github.repository }}"
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: steps.resolved.outputs.report-path != ''
         with:
           path: gh-pages-site
 
       - id: deployment
         if: steps.resolved.outputs.report-path != ''
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
