@@ -86,10 +86,14 @@ describe("buildPullRequestComment", () => {
             },
           ],
           hackerNews: [],
-          changelog: {
-            url: "https://www.npmjs.com/package/lodash",
-            label: "Package page",
-            kind: "npm",
+          references: {
+            links: [
+              {
+                url: "https://www.npmjs.com/package/lodash/v/4.17.15",
+                label: "npm @ 4.17.15",
+                kind: "npm-version",
+              },
+            ],
           },
         },
         {
@@ -102,10 +106,14 @@ describe("buildPullRequestComment", () => {
           securityLevel: "yellow",
           cves: [],
           hackerNews: [],
-          changelog: {
-            url: "https://www.npmjs.com/package/negotiator",
-            label: "Package page",
-            kind: "npm",
+          references: {
+            links: [
+              {
+                url: "https://www.npmjs.com/package/negotiator/v/0.6.2",
+                label: "npm @ 0.6.2",
+                kind: "npm-version",
+              },
+            ],
           },
         },
       ],

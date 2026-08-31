@@ -87,6 +87,9 @@ export const reportStyles = `
   .version, .meta {
     margin: 0.35rem 0;
   }
+  .link-row {
+    line-height: 1.7;
+  }
   a {
     color: #93c5fd;
   }

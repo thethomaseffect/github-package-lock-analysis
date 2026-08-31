@@ -1,14 +1,14 @@
-import { resolveChangelogLink } from "./enrichment/changelog.js";
+import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
 import { diffLockfiles } from "./lockfile/diff.js";
 async function enrichChange(change, includeHackerNews) {
-    const [cves, hackerNews, changelog] = await Promise.all([
+    const [cves, hackerNews, references] = await Promise.all([
         lookupCves(change.name, change.newVersion),
         includeHackerNews
             ? lookupHackerNews(change.name, change.newVersion)
             : Promise.resolve([]),
-        resolveChangelogLink(change.name, change.newVersion),
+        resolvePackageReferences(change.name, change.newVersion),
     ]);
     const securityLevel = cves.length > 0 ? "red" : "yellow";
     return {
@@ -16,7 +16,7 @@ async function enrichChange(change, includeHackerNews) {
         securityLevel,
         cves,
         hackerNews,
-        changelog,
+        references,
     };
 }
 export async function analyzeLockfileChanges(oldLockfile, newLockfile, options = {}) {

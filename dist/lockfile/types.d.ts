@@ -32,10 +32,13 @@ export interface HackerNewsReference {
     url: string;
     date: string;
 }
-export interface ChangelogLink {
+export interface ReferenceLink {
     url: string;
     label: string;
-    kind: "changelog" | "releases" | "npm";
+    kind: "npm-version" | "changelog" | "releases" | "commit";
+}
+export interface PackageReferences {
+    links: ReferenceLink[];
 }
 export interface PackageChange {
     lockPath: string;
@@ -47,7 +50,7 @@ export interface PackageChange {
     securityLevel: SecurityLevel;
     cves: CveReference[];
     hackerNews: HackerNewsReference[];
-    changelog: ChangelogLink;
+    references: PackageReferences;
 }
 export interface AnalysisResult {
     projectName: string;

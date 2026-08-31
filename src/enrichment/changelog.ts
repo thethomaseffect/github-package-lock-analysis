@@ -1,15 +1,24 @@
-import { buildNpmPackageUrl } from "./urls.js";
+import { buildNpmVersionUrl } from "./urls.js";
 
-export type ChangelogLinkKind = "changelog" | "releases" | "npm";
+export type ReferenceLinkKind = "npm-version" | "changelog" | "releases" | "commit";
 
-export interface ChangelogLink {
+export interface ReferenceLink {
   url: string;
   label: string;
-  kind: ChangelogLinkKind;
+  kind: ReferenceLinkKind;
+}
+
+export interface PackageReferences {
+  links: ReferenceLink[];
 }
 
 interface NpmPackageMetadata {
   repository?: { url?: string; directory?: string } | string;
+}
+
+interface NpmVersionMetadata {
+  gitHead?: string;
+  repository?: { url?: string } | string;
 }
 
 interface ChangelogFileLocation {
@@ -29,10 +38,14 @@ const CHANGELOG_CANDIDATES = [
 
 const DEFAULT_BRANCHES = ["main", "master"];
 
-const cache = new Map<string, ChangelogLink>();
+const cache = new Map<string, PackageReferences>();
 
 export function npmRegistryPackageUrl(packageName: string): string {
   return `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
+}
+
+export function npmRegistryVersionUrl(packageName: string, version: string): string {
+  return `${npmRegistryPackageUrl(packageName)}/${encodeURIComponent(version)}`;
 }
 
 export function parseGitHubRepository(repositoryUrl: string): {
@@ -114,6 +127,10 @@ export function buildGitHubReleaseTagUrl(
 ): string {
   const tag = version.startsWith("v") ? version : `v${version}`;
   return `https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag)}`;
+}
+
+export function buildGitHubCommitUrl(owner: string, repo: string, sha: string): string {
+  return `https://github.com/${owner}/${repo}/commit/${sha}`;
 }
 
 /** GitHub-compatible slug for markdown heading anchors. */
@@ -198,6 +215,22 @@ async function fetchNpmMetadata(packageName: string): Promise<NpmPackageMetadata
   }
 }
 
+async function fetchNpmVersionMetadata(
+  packageName: string,
+  version: string,
+): Promise<NpmVersionMetadata | null> {
+  try {
+    const response = await fetch(npmRegistryVersionUrl(packageName, version));
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as NpmVersionMetadata;
+  } catch {
+    return null;
+  }
+}
+
 async function findChangelogFileLocation(
   owner: string,
   repo: string,
@@ -217,7 +250,7 @@ async function findChangelogFileLocation(
 async function resolveChangelogFileLink(
   location: ChangelogFileLocation,
   version: string,
-): Promise<ChangelogLink> {
+): Promise<ReferenceLink> {
   const rawUrl = buildGitHubRawUrl(
     location.owner,
     location.repo,
@@ -241,56 +274,84 @@ async function resolveChangelogFileLink(
   };
 }
 
-export async function resolveChangelogLink(
+async function resolveSecondaryLink(
+  github: { owner: string; repo: string },
+  version: string,
+): Promise<ReferenceLink | null> {
+  const changelogLocation = await findChangelogFileLocation(github.owner, github.repo);
+  if (changelogLocation) {
+    return resolveChangelogFileLink(changelogLocation, version);
+  }
+
+  return {
+    url: buildGitHubReleaseTagUrl(github.owner, github.repo, version),
+    label: `Release notes (${version})`,
+    kind: "releases",
+  };
+}
+
+export async function resolvePackageReferences(
   packageName: string,
   version: string,
-): Promise<ChangelogLink> {
+): Promise<PackageReferences> {
   const cacheKey = `${packageName}@${version}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const npmFallback: ChangelogLink = {
-    url: buildNpmPackageUrl(packageName),
-    label: "Package page",
-    kind: "npm",
-  };
+  const links: ReferenceLink[] = [
+    {
+      url: buildNpmVersionUrl(packageName, version),
+      label: `npm @ ${version}`,
+      kind: "npm-version",
+    },
+  ];
 
-  const metadata = await fetchNpmMetadata(packageName);
-  if (!metadata) {
-    cache.set(cacheKey, npmFallback);
-    return npmFallback;
+  const [packageMetadata, versionMetadata] = await Promise.all([
+    fetchNpmMetadata(packageName),
+    fetchNpmVersionMetadata(packageName, version),
+  ]);
+
+  const repositoryUrl =
+    extractRepositoryUrl(packageMetadata ?? {}) ??
+    extractRepositoryUrl(versionMetadata ?? {});
+  const github = repositoryUrl ? parseGitHubRepository(repositoryUrl) : null;
+
+  if (github) {
+    const secondary = await resolveSecondaryLink(github, version);
+    if (secondary) {
+      links.push(secondary);
+    }
+
+    const gitHead = versionMetadata?.gitHead;
+    if (gitHead) {
+      links.push({
+        url: buildGitHubCommitUrl(github.owner, github.repo, gitHead),
+        label: "Publish commit",
+        kind: "commit",
+      });
+    }
   }
 
-  const repositoryUrl = extractRepositoryUrl(metadata);
-  if (!repositoryUrl) {
-    cache.set(cacheKey, npmFallback);
-    return npmFallback;
-  }
+  const references = { links };
+  cache.set(cacheKey, references);
+  return references;
+}
 
-  const github = parseGitHubRepository(repositoryUrl);
-  if (!github) {
-    cache.set(cacheKey, npmFallback);
-    return npmFallback;
-  }
-
-  const changelogLocation = await findChangelogFileLocation(github.owner, github.repo);
-  if (changelogLocation) {
-    const link = await resolveChangelogFileLink(changelogLocation, version);
-    cache.set(cacheKey, link);
-    return link;
-  }
-
-  const releasesLink: ChangelogLink = {
-    url: buildGitHubReleaseTagUrl(github.owner, github.repo, version),
-    label: `Release notes (${version})`,
-    kind: "releases",
-  };
-  cache.set(cacheKey, releasesLink);
-  return releasesLink;
+/** @deprecated Use resolvePackageReferences */
+export async function resolveChangelogLink(
+  packageName: string,
+  version: string,
+): Promise<ReferenceLink> {
+  const references = await resolvePackageReferences(packageName, version);
+  return references.links[1] ?? references.links[0]!;
 }
 
 export function clearChangelogCache(): void {
+  cache.clear();
+}
+
+export function clearReferencesCache(): void {
   cache.clear();
 }

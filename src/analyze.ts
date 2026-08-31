@@ -1,4 +1,4 @@
-import { resolveChangelogLink } from "./enrichment/changelog.js";
+import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
 import { diffLockfiles, type RawPackageChange } from "./lockfile/diff.js";
@@ -14,12 +14,12 @@ async function enrichChange(
   change: RawPackageChange,
   includeHackerNews: boolean,
 ): Promise<PackageChange> {
-  const [cves, hackerNews, changelog] = await Promise.all([
+  const [cves, hackerNews, references] = await Promise.all([
     lookupCves(change.name, change.newVersion),
     includeHackerNews
       ? lookupHackerNews(change.name, change.newVersion)
       : Promise.resolve([]),
-    resolveChangelogLink(change.name, change.newVersion),
+    resolvePackageReferences(change.name, change.newVersion),
   ]);
 
   const securityLevel: SecurityLevel = cves.length > 0 ? "red" : "yellow";
@@ -29,7 +29,7 @@ async function enrichChange(
     securityLevel,
     cves,
     hackerNews,
-    changelog,
+    references,
   };
 }
 

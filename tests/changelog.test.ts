@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildGitHubBlobUrl,
-  clearChangelogCache,
+  clearReferencesCache,
   extractRepositoryUrl,
   findVersionHeaderAnchor,
   githubMarkdownAnchor,
   headerMatchesVersion,
   parseGitHubRepository,
-  resolveChangelogLink,
+  resolvePackageReferences,
 } from "../src/enrichment/changelog.js";
 
 describe("parseGitHubRepository", () => {
@@ -70,17 +70,27 @@ describe("findVersionHeaderAnchor", () => {
   });
 });
 
-describe("resolveChangelogLink", () => {
+describe("resolvePackageReferences", () => {
   afterEach(() => {
-    clearChangelogCache();
+    clearReferencesCache();
     vi.restoreAllMocks();
   });
 
-  it("links to the version heading when changelog content is available", async () => {
+  it("includes npm version, changelog, and publish commit links", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
 
-      if (url.includes("registry.npmjs.org/lodash")) {
+      if (url.includes("registry.npmjs.org/lodash/4.17.15")) {
+        return new Response(
+          JSON.stringify({
+            gitHead: "abc123def456",
+            repository: { url: "git+https://github.com/lodash/lodash.git" },
+          }),
+          { status: 200 },
+        );
+      }
+
+      if (url.includes("registry.npmjs.org/lodash") && !url.endsWith("/4.17.15")) {
         return new Response(
           JSON.stringify({
             repository: { url: "git+https://github.com/lodash/lodash.git" },
@@ -115,18 +125,33 @@ describe("resolveChangelogLink", () => {
       return new Response(null, { status: 404 });
     });
 
-    const link = await resolveChangelogLink("lodash", "4.17.15");
+    const references = await resolvePackageReferences("lodash", "4.17.15");
 
-    expect(link.kind).toBe("changelog");
-    expect(link.label).toBe("Changelog (4.17.15)");
-    expect(link.url).toBe(
-      `${buildGitHubBlobUrl("lodash", "lodash", "main", "CHANGELOG")}#v41715`,
-    );
+    expect(references.links).toHaveLength(3);
+    expect(references.links[0]).toMatchObject({
+      kind: "npm-version",
+      label: "npm @ 4.17.15",
+      url: "https://www.npmjs.com/package/lodash/v/4.17.15",
+    });
+    expect(references.links[1]).toMatchObject({
+      kind: "changelog",
+      label: "Changelog (4.17.15)",
+      url: `${buildGitHubBlobUrl("lodash", "lodash", "main", "CHANGELOG")}#v41715`,
+    });
+    expect(references.links[2]).toMatchObject({
+      kind: "commit",
+      label: "Publish commit",
+      url: "https://github.com/lodash/lodash/commit/abc123def456",
+    });
   });
 
-  it("falls back to github release tag when no changelog file exists", async () => {
+  it("includes npm version and release notes when no changelog file exists", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
+
+      if (url.includes("registry.npmjs.org/negotiator/0.6.2")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
 
       if (url.includes("registry.npmjs.org/negotiator")) {
         return new Response(
@@ -144,20 +169,28 @@ describe("resolveChangelogLink", () => {
       return new Response(null, { status: 404 });
     });
 
-    const link = await resolveChangelogLink("negotiator", "0.6.2");
+    const references = await resolvePackageReferences("negotiator", "0.6.2");
 
-    expect(link.kind).toBe("releases");
-    expect(link.label).toBe("Release notes (0.6.2)");
-    expect(link.url).toBe("https://github.com/jshttp/negotiator/releases/tag/v0.6.2");
+    expect(references.links).toHaveLength(2);
+    expect(references.links[0]?.kind).toBe("npm-version");
+    expect(references.links[1]).toMatchObject({
+      kind: "releases",
+      label: "Release notes (0.6.2)",
+      url: "https://github.com/jshttp/negotiator/releases/tag/v0.6.2",
+    });
   });
 
-  it("falls back to npm when registry metadata is unavailable", async () => {
+  it("falls back to npm version only when registry metadata is unavailable", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 404 }));
 
-    const link = await resolveChangelogLink("missing-package", "1.0.0");
+    const references = await resolvePackageReferences("missing-package", "1.0.0");
 
-    expect(link.kind).toBe("npm");
-    expect(link.label).toBe("Package page");
-    expect(link.url).toBe("https://www.npmjs.com/package/missing-package");
+    expect(references.links).toEqual([
+      {
+        url: "https://www.npmjs.com/package/missing-package/v/1.0.0",
+        label: "npm @ 1.0.0",
+        kind: "npm-version",
+      },
+    ]);
   });
 });

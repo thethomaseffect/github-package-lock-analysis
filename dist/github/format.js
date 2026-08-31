@@ -27,7 +27,12 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
         if (change.cves.length > 0) {
             lines.push(`  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`);
         }
-        lines.push(`  - [${change.changelog.label}](${change.changelog.url})`);
+        const referenceLinks = change.references.links
+            .map((link) => `[${link.label}](${link.url})`)
+            .join(" | ");
+        if (referenceLinks) {
+            lines.push(`  - ${referenceLinks}`);
+        }
         lines.push("");
     }
     if (reportUrl) {

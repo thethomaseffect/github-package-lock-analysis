@@ -1,1 +1,1 @@
-{"version":3,"file":"PackageRow.d.ts","sourceRoot":"","sources":["../../../src/report/components/PackageRow.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,yBAAyB,CAAC;AAG7D,UAAU,eAAe;IACvB,MAAM,EAAE,aAAa,CAAC;CACvB;AAED,wBAAgB,UAAU,CAAC,EAAE,MAAM,EAAE,EAAE,eAAe,+BAgDrD"}
+{"version":3,"file":"PackageRow.d.ts","sourceRoot":"","sources":["../../../src/report/components/PackageRow.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,yBAAyB,CAAC;AAG7D,UAAU,eAAe;IACvB,MAAM,EAAE,aAAa,CAAC;CACvB;AAED,wBAAgB,UAAU,CAAC,EAAE,MAAM,EAAE,EAAE,eAAe,+BAsDrD"}

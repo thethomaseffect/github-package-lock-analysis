@@ -71,6 +71,6 @@ export function toUnenrichedChanges(rawChanges: RawPackageChange[]): PackageChan
     securityLevel: "yellow" as const,
     cves: [],
     hackerNews: [],
-    changelog: { url: "", label: "Package page", kind: "npm" },
+    references: { links: [] },
   }));
 }

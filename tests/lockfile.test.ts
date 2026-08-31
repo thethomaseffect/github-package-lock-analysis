@@ -79,10 +79,14 @@ describe("buildReportHtml", () => {
             },
           ],
           hackerNews: [],
-          changelog: {
-            url: "https://www.npmjs.com/package/lodash",
-            label: "Package page",
-            kind: "npm",
+          references: {
+            links: [
+              {
+                url: "https://www.npmjs.com/package/lodash/v/4.17.15",
+                label: "npm @ 4.17.15",
+                kind: "npm-version",
+              },
+            ],
           },
         },
       ],

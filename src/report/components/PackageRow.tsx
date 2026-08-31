@@ -34,10 +34,16 @@ export function PackageRow({ change }: PackageRowProps) {
           ))
         )}
       </p>
-      <p className="meta">
-        <a href={change.changelog.url} target="_blank" rel="noopener noreferrer">
-          {change.changelog.label}
-        </a>
+      <p className="meta link-row">
+        <strong>Links:</strong>{" "}
+        {change.references.links.map((link, index) => (
+          <span key={link.url}>
+            {index > 0 ? " | " : null}
+            <a href={link.url} target="_blank" rel="noopener noreferrer">
+              {link.label}
+            </a>
+          </span>
+        ))}
       </p>
       {change.hackerNews.length > 0 ? (
         <ul className="hn-list">
