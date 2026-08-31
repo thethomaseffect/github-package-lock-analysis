@@ -5,17 +5,13 @@ name: Publish Pages Demo
 
 on:
   workflow_dispatch:
-    inputs:
-      chain-remaining:
-        description: Internal — remaining chained demo publishes (do not set manually)
-        required: false
-        default: "0"
   push:
     branches: [main]
     paths:
       - .github/workflows/publish-pages.yml
       - fixtures/sample-project/**
       - scripts/prepare-pages-site.ts
+      - scripts/sync-pages-site-from-live.ts
       - src/report-manifest.ts
       - src/report-meta.ts
       - src/git/manifest.ts
@@ -23,7 +19,6 @@ on:
       - dist/bundle/**
 
 permissions:
-  actions: write
   contents: read
   pages: write
   id-token: write
@@ -43,20 +38,12 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Checkout existing GitHub Pages site
-        id: pages-site
+      - name: Sync existing GitHub Pages site from live URL
         run: |
-          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
-            git fetch --depth=1 origin gh-pages
-            git worktree add gh-pages-site FETCH_HEAD
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            mkdir -p gh-pages-site/reports
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Initialize pages site directory
-        run: mkdir -p gh-pages-site/reports
+          mkdir -p gh-pages-site/reports
+          npx tsx scripts/sync-pages-site-from-live.ts \
+            --site-dir gh-pages-site \
+            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
       - name: Remove legacy fake demo entries
         run: rm -rf gh-pages-site/reports/sample-demo-*
@@ -103,31 +90,3 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v5
-
-      - name: Chain demo history runs
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          MANIFEST="gh-pages-site/reports/manifest.json"
-          COUNT=0
-          if [ -f "$MANIFEST" ]; then
-            COUNT=$(node -pe "JSON.parse(require('fs').readFileSync('$MANIFEST','utf8')).reports.length")
-          fi
-          TARGET=3
-          NEED=$((TARGET - COUNT))
-          CHAIN="${{ github.event.inputs.chain-remaining || '0' }}"
-
-          echo "Reports on site: $COUNT (target $TARGET, need $NEED more)"
-
-          if [ "$NEED" -le 0 ]; then
-            exit 0
-          fi
-
-          if [ "${{ github.event_name }}" = "push" ]; then
-            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((NEED - 1))"
-          elif [ "$CHAIN" != "0" ]; then
-            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((CHAIN - 1))"
-          elif [ "$NEED" -gt 0 ]; then
-            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((NEED - 1))"
-          fi

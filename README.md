@@ -57,7 +57,8 @@ Unchanged packages are omitted.
 ├── fixtures/sample-project/                # Safe before/after lockfile pairs
 ├── scripts/
 │   ├── run-fixtures.ts                       # End-to-end local fixture runner
-│   └── prepare-pages-site.ts                 # Merge reports into a static site (Pages / custom host)
+│   ├── prepare-pages-site.ts                 # Merge reports into a static site (Pages / custom host)
+│   └── sync-pages-site-from-live.ts          # Download deployed site before merge (retain report history)
 ├── .github/workflows/
 │   ├── ci.yml                              # Build & test
 │   ├── lockfile-analysis.yml               # Demo workflow for this repo
@@ -167,7 +168,7 @@ Each workflow run publishes a unique report under **`/reports/<workflow-run-id>/
 **One-time repo setup**
 
 1. Enable **GitHub Pages** in repository settings with source **GitHub Actions**.
-2. Copy [`scripts/prepare-pages-site.ts`](scripts/prepare-pages-site.ts) into your repo (or vendor this file from `@v1`). It merges `report-output/` into a static site directory and updates `reports/manifest.json`.
+2. Copy [`scripts/prepare-pages-site.ts`](scripts/prepare-pages-site.ts) and [`scripts/sync-pages-site-from-live.ts`](scripts/sync-pages-site-from-live.ts) into your repo (or vendor from `@v1`). The sync script downloads the currently deployed site so each run appends to the reports index (GitHub Actions Pages deploys do not maintain a `gh-pages` git branch).
 3. Add a workflow based on the pattern below (see [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml) in this repo for a full reference).
 
 ```yaml
@@ -203,14 +204,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch existing Pages site
+      - name: Sync existing GitHub Pages site from live URL
         run: |
-          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
-            git fetch --depth=1 origin gh-pages
-            git worktree add gh-pages-site FETCH_HEAD
-          else
-            mkdir -p gh-pages-site/reports
-          fi
+          mkdir -p gh-pages-site/reports
+          npx tsx scripts/sync-pages-site-from-live.ts \
+            --site-dir gh-pages-site \
+            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
 
       - name: Resolve commit metadata
         id: report-commit
