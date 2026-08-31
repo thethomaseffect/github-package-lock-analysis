@@ -142,3 +142,4 @@ dist/bundle/licenses.txt
 
 # Fixture output (generated locally / in CI)
 fixtures/**/.output/
+fixtures/**/.output-baseline/

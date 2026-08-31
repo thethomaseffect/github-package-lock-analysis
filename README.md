@@ -145,6 +145,7 @@ npm run lint
 npm test
 npm run build
 npm run test:fixtures   # hits OSV; writes fixtures/sample-project/.output/index.html
+npm run test:baseline   # diff-only; writes fixtures/sample-project/.output-baseline/index.html
 ```
 
 The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfiles are committed JSON — no `npm install` in CI.
@@ -152,6 +153,17 @@ The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfi
 ## Live demo
 
 This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1`); [`demo/action.yml`](demo/action.yml) is only for our sample-project fixtures.
+
+## Hackathon submission
+
+Built for the [micro1 Frontier Engineering Challenge 2026](https://www.hackerearth.com/community/challenges/hackathon/micro1-frontier-engineering-challenge-2026/).
+
+| Path | Command | What it proves |
+| --- | --- | --- |
+| **Baseline** | `npm run test:baseline` | Diff-only report, no CVE lookups |
+| **Advanced** | `npm run test:fixtures` | Full enrichment (red/yellow on fixture) |
+
+Full judge package: [SUBMISSION.md](./SUBMISSION.md) · agent trajectories: [docs/AGENT_TRAJECTORIES.md](./docs/AGENT_TRAJECTORIES.md) · [PROMPTS.md](./PROMPTS.md)
 
 ## Docs
 

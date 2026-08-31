@@ -104,6 +104,16 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 
 ---
 
+## 2026-08-31 — Hackathon submission package
+
+**Summary:** Prepare for [Frontier Engineering Challenge 2026](https://www.hackerearth.com/community/challenges/hackathon/micro1-frontier-engineering-challenge-2026/) submission: document baseline vs advanced solution, reproduction guide for judges, agent trajectory disclosure, and a runnable baseline path (`npm run test:baseline`) that diffs fixtures without OSV calls.
+
+**Scope:** `SUBMISSION.md`, `docs/AGENT_TRAJECTORIES.md`, `scripts/run-baseline.ts`, `README.md` hackathon section, `package.json` `test:baseline`.
+
+**Outcome:** Judges can run baseline (yellow-only, offline) vs advanced (`test:fixtures`, red lodash) on the same fixture. User still records ≤5 min solution video and submits on HackerEarth before Aug 31 18:00 UTC.
+
+---
+
 <!-- Template for future entries:
 
 ## YYYY-MM-DD — Short title
