@@ -85,10 +85,10 @@ export function buildContentsIndexHtml(
       const commitShort = entry.commit.slice(0, 12);
       const commitLink =
         repositoryUrl && entry.commit
-          ? `<a href="${escapeHtml(`${repositoryUrl}/commit/${entry.commit}`)}">${escapeHtml(commitShort)}</a>`
+          ? buildExternalLink(`${repositoryUrl}/commit/${entry.commit}`, commitShort)
           : escapeHtml(commitShort);
       const runLink = entry.workflowRunUrl
-        ? `<a href="${escapeHtml(entry.workflowRunUrl)}">${escapeHtml(entry.runId)}</a>`
+        ? buildExternalLink(entry.workflowRunUrl, entry.runId)
         : escapeHtml(entry.runId);
       const issueClass = entry.issueCount > 0 ? "issue-warn" : "";
 
@@ -115,6 +115,17 @@ export function buildContentsIndexHtml(
       a { color: #93c5fd; }
       .muted { color: #94a3b8; }
       .issue-warn { color: #fca5a5; font-weight: 600; }
+      .external-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .external-icon {
+        width: 0.85em;
+        height: 0.85em;
+        opacity: 0.8;
+        flex-shrink: 0;
+      }
       table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
       th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid #334155; }
       th { color: #cbd5e1; font-size: 0.9rem; }
@@ -142,6 +153,14 @@ export function buildContentsIndexHtml(
     </table>
   </body>
 </html>`;
+}
+
+function buildExternalLink(href: string, label: string): string {
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="external-link" title="Opens on GitHub in a new tab">${escapeHtml(label)}${externalLinkIcon()}</a>`;
+}
+
+function externalLinkIcon(): string {
+  return `<svg class="external-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>`;
 }
 
 function escapeHtml(value: string): string {

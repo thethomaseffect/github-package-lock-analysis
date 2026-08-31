@@ -92,5 +92,11 @@ describe("report manifest", () => {
     expect(html).toContain("3");
     expect(html).toContain("1");
     expect(html).toContain("./reports/999/");
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('class="external-link"');
+    expect(html).toContain('class="external-icon"');
+    expect(html).toContain("https://github.com/org/repo/commit/abc123");
+    expect(html).toContain("https://github.com/org/repo/actions/runs/999");
   });
 });
