@@ -19,7 +19,7 @@ async function enrichChange(
     includeHackerNews
       ? lookupHackerNews(change.name, change.newVersion)
       : Promise.resolve([]),
-    resolveChangelogLink(change.name),
+    resolveChangelogLink(change.name, change.newVersion),
   ]);
 
   const securityLevel: SecurityLevel = cves.length > 0 ? "red" : "yellow";
