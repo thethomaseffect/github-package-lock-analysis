@@ -26,6 +26,11 @@ export function Report({ result, indexHref = "../../" }: ReportProps) {
           <div className="summary-card">
             <strong>{result.yellowCount}</strong> review
           </div>
+          {result.manualReviewCount > 0 ? (
+            <div className="summary-card">
+              <strong>{result.manualReviewCount}</strong> manual review
+            </div>
+          ) : null}
           {result.auditedExisting ? (
             <div className="summary-card">
               <strong>{result.existingRedCount}</strong> existing CVE
@@ -33,6 +38,14 @@ export function Report({ result, indexHref = "../../" }: ReportProps) {
           ) : null}
         </div>
       </header>
+
+      {result.enrichmentLimited ? (
+        <p className="section-note enrichment-notice">
+          More than {result.enrichmentLimit} packages changed — CVE and changelog
+          lookups were skipped. Rows are marked with ❓; open npm links to
+          investigate manually.
+        </p>
+      ) : null}
 
       <section>
         <h2 className="section-title">Updated packages</h2>
@@ -163,6 +176,15 @@ export const reportStyles = `
   .badge.yellow {
     background: #713f12;
     color: #fef08a;
+  }
+  .badge.manual-review {
+    cursor: help;
+  }
+  .enrichment-notice {
+    background: #1e293b;
+    border: 1px solid #eab308;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
   }
   .version, .meta {
     margin: 0.35rem 0;

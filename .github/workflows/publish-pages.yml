@@ -5,12 +5,16 @@ name: Publish Pages Demo
 
 on:
   workflow_dispatch:
+    inputs:
+      chain-remaining:
+        description: Internal — remaining chained demo publishes (do not set manually)
+        required: false
+        default: "0"
   push:
     branches: [main]
     paths:
       - .github/workflows/publish-pages.yml
       - fixtures/sample-project/**
-      - scripts/seed-demo-reports.ts
       - scripts/prepare-pages-site.ts
       - src/report-manifest.ts
       - src/report-meta.ts
@@ -19,6 +23,7 @@ on:
       - dist/bundle/**
 
 permissions:
+  actions: write
   contents: read
   pages: write
   id-token: write
@@ -36,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Checkout existing GitHub Pages site
         id: pages-site
@@ -52,6 +57,9 @@ jobs:
 
       - name: Initialize pages site directory
         run: mkdir -p gh-pages-site/reports
+
+      - name: Remove legacy fake demo entries
+        run: rm -rf gh-pages-site/reports/sample-demo-*
 
       - name: Resolve commit title
         id: commit-meta
@@ -79,15 +87,8 @@ jobs:
           report-base-commit: ${{ steps.commit-meta.outputs.base }}
           report-commit-title: ${{ steps.commit-meta.outputs.title }}
 
-      - name: Seed sample demo history
-        run: |
-          npx tsx scripts/seed-demo-reports.ts \
-            --site-dir gh-pages-site \
-            --report-file report-output/index.html \
-            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
-            --repository-url "https://github.com/${{ github.repository }}"
-
       - name: Merge report into GitHub Pages site
+        id: merge
         run: |
           npx tsx scripts/prepare-pages-site.ts \
             --site-dir gh-pages-site \
@@ -102,3 +103,31 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Chain demo history runs
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MANIFEST="gh-pages-site/reports/manifest.json"
+          COUNT=0
+          if [ -f "$MANIFEST" ]; then
+            COUNT=$(node -pe "JSON.parse(require('fs').readFileSync('$MANIFEST','utf8')).reports.length")
+          fi
+          TARGET=3
+          NEED=$((TARGET - COUNT))
+          CHAIN="${{ github.event.inputs.chain-remaining || '0' }}"
+
+          echo "Reports on site: $COUNT (target $TARGET, need $NEED more)"
+
+          if [ "$NEED" -le 0 ]; then
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((NEED - 1))"
+          elif [ "$CHAIN" != "0" ]; then
+            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((CHAIN - 1))"
+          elif [ "$NEED" -gt 0 ]; then
+            gh workflow run publish-pages.yml --ref "${GITHUB_REF_NAME}" -f "chain-remaining=$((NEED - 1))"
+          fi

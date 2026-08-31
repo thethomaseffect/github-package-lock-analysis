@@ -1,0 +1,2 @@
+export const MANUAL_REVIEW_TOOLTIP =
+  "CVE and changelog lookups were skipped because of the number of changes. There could be a security issue — open the npm link to investigate manually.";

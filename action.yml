@@ -87,6 +87,18 @@ inputs:
     description: Fail the action when known CVEs are found in changes or existing vulnerability audit
     required: false
     default: "true"
+  enrichment-limit:
+    description: Max changed packages to enrich with CVE/changelog lookups; above this, rows are manual-review only (npm link)
+    required: false
+    default: "500"
+  enrichment-concurrency:
+    description: Concurrent enrichment requests when under enrichment-limit
+    required: false
+    default: "8"
+  summary-list-limit:
+    description: Max changed packages listed in job summary and PR comments
+    required: false
+    default: "100"
 
 outputs:
   report-path:

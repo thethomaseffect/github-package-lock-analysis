@@ -1,4 +1,6 @@
+import { mapWithConcurrency } from "./concurrency.js";
 import { auditExistingVulnerabilities } from "./audit-existing.js";
+import { buildMinimalPackageReferences } from "./enrichment/minimal-references.js";
 import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { lookupHackerNews } from "./enrichment/hackernews.js";
@@ -10,6 +12,9 @@ import type {
   PackageLockJson,
   SecurityLevel,
 } from "./lockfile/types.js";
+
+export const DEFAULT_ENRICHMENT_LIMIT = 500;
+export const DEFAULT_ENRICHMENT_CONCURRENCY = 8;
 
 async function enrichChange(
   change: RawPackageChange,
@@ -34,6 +39,41 @@ async function enrichChange(
   };
 }
 
+function toManualReviewChange(change: RawPackageChange): PackageChange {
+  return {
+    ...change,
+    securityLevel: "yellow",
+    manualReview: true,
+    cves: [],
+    hackerNews: [],
+    references: buildMinimalPackageReferences(change.name, change.newVersion),
+  };
+}
+
+function summarizeChanges(changes: PackageChange[]): {
+  redCount: number;
+  yellowCount: number;
+  manualReviewCount: number;
+} {
+  let redCount = 0;
+  let manualReviewCount = 0;
+
+  for (const change of changes) {
+    if (change.securityLevel === "red") {
+      redCount += 1;
+    }
+    if (change.manualReview) {
+      manualReviewCount += 1;
+    }
+  }
+
+  return {
+    redCount,
+    yellowCount: changes.length - redCount,
+    manualReviewCount,
+  };
+}
+
 export async function analyzeLockfileChanges(
   oldLockfile: PackageLockJson,
   newLockfile: PackageLockJson,
@@ -45,12 +85,20 @@ export async function analyzeLockfileChanges(
     options.projectName,
   );
 
-  const changes = await Promise.all(
-    rawChanges.map((change) => enrichChange(change, options.includeHackerNews ?? false)),
-  );
+  const enrichmentLimit = options.enrichmentLimit ?? DEFAULT_ENRICHMENT_LIMIT;
+  const enrichmentConcurrency =
+    options.enrichmentConcurrency ?? DEFAULT_ENRICHMENT_CONCURRENCY;
+  const enrichmentLimited = rawChanges.length > enrichmentLimit;
 
-  const redCount = changes.filter((change) => change.securityLevel === "red").length;
-  const yellowCount = changes.length - redCount;
+  const changes = enrichmentLimited
+    ? rawChanges.map(toManualReviewChange)
+    : await mapWithConcurrency(
+        rawChanges,
+        enrichmentConcurrency,
+        (change) => enrichChange(change, options.includeHackerNews ?? false),
+      );
+
+  const { redCount, yellowCount, manualReviewCount } = summarizeChanges(changes);
 
   const projectName =
     options.projectName ??
@@ -75,6 +123,9 @@ export async function analyzeLockfileChanges(
     changedCount: changes.length,
     redCount,
     yellowCount,
+    manualReviewCount,
+    enrichmentLimited,
+    enrichmentLimit,
     existingVulnerabilities,
     existingRedCount: existingVulnerabilities.length,
     auditedExisting: options.auditExisting ?? false,

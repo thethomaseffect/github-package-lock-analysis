@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from "./concurrency.js";
 import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
 import { parseLockfile } from "./lockfile/parse.js";
@@ -11,33 +12,6 @@ export interface AuditExistingOptions {
   projectName?: string;
   excludeLockPaths?: Set<string>;
   concurrency?: number;
-}
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>,
-): Promise<R[]> {
-  if (items.length === 0) {
-    return [];
-  }
-
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-
-  async function worker(): Promise<void> {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex++;
-      results[currentIndex] = await mapper(items[currentIndex]!);
-    }
-  }
-
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker(),
-  );
-  await Promise.all(workers);
-  return results;
 }
 
 function compareExisting(a: ExistingVulnerability, b: ExistingVulnerability): number {

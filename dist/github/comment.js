@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { buildPullRequestComment } from "./format.js";
 const COMMENT_MARKER = "<!-- package-lock-analysis -->";
-export async function postPullRequestComment(result, artifactName, reportUrl) {
+export async function postPullRequestComment(result, artifactName, reportUrl, summaryListLimit) {
     if (github.context.eventName !== "pull_request") {
         core.info("Skipping PR comment — not a pull_request event.");
         return;
@@ -18,7 +18,7 @@ export async function postPullRequestComment(result, artifactName, reportUrl) {
         return;
     }
     const octokit = github.getOctokit(token);
-    const body = `${COMMENT_MARKER}\n${buildPullRequestComment(result, artifactName, reportUrl)}`;
+    const body = `${COMMENT_MARKER}\n${buildPullRequestComment(result, artifactName, reportUrl, summaryListLimit)}`;
     const { owner, repo } = github.context.repo;
     const existing = await octokit.rest.issues.listComments({
         owner,

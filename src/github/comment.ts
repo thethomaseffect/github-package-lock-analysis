@@ -10,6 +10,7 @@ export async function postPullRequestComment(
   result: AnalysisResult,
   artifactName: string,
   reportUrl?: string,
+  summaryListLimit?: number,
 ): Promise<void> {
   if (github.context.eventName !== "pull_request") {
     core.info("Skipping PR comment — not a pull_request event.");
@@ -32,7 +33,7 @@ export async function postPullRequestComment(
   }
 
   const octokit = github.getOctokit(token);
-  const body = `${COMMENT_MARKER}\n${buildPullRequestComment(result, artifactName, reportUrl)}`;
+  const body = `${COMMENT_MARKER}\n${buildPullRequestComment(result, artifactName, reportUrl, summaryListLimit)}`;
   const { owner, repo } = github.context.repo;
 
   const existing = await octokit.rest.issues.listComments({

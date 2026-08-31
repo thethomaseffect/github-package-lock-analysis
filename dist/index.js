@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import { join } from "node:path";
-import { analyzeLockfileChanges } from "./analyze.js";
+import { analyzeLockfileChanges, DEFAULT_ENRICHMENT_CONCURRENCY, DEFAULT_ENRICHMENT_LIMIT, } from "./analyze.js";
+import { DEFAULT_SUMMARY_LIST_LIMIT } from "./github/format.js";
 import { resolveLockfiles, shouldSkipUnchangedLockfile, } from "./git/resolve-lockfiles.js";
 import { postPullRequestComment } from "./github/comment.js";
 import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactSummaryHtml, } from "./github/format.js";
@@ -75,7 +76,7 @@ async function publishResult(result, options, reportPath, reportCommit, reportRu
         [{ data: "Metric", header: true }, { data: "Count", header: true }],
         ...buildSummaryRows(result),
     ]);
-    const changeLines = buildSummaryChangeList(result);
+    const changeLines = buildSummaryChangeList(result, options.summaryListLimit);
     if (changeLines.length > 0) {
         summary.addHeading("Updated packages", 3).addList(changeLines);
     }
@@ -88,8 +89,11 @@ async function publishResult(result, options, reportPath, reportCommit, reportRu
     }
     summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactSummaryHtml(options.artifactName, workflowRunUrl, reportUrl ?? options.reportUrl));
     await summary.write();
+    if (result.enrichmentLimited) {
+        core.warning(`${result.changedCount} packages changed (limit ${result.enrichmentLimit}) — CVE and changelog lookups were skipped. Review npm links in the report manually.`);
+    }
     if (options.postPrComment) {
-        await postPullRequestComment(result, options.artifactName, reportUrl ?? options.reportUrl ?? workflowRunUrl);
+        await postPullRequestComment(result, options.artifactName, reportUrl ?? options.reportUrl ?? workflowRunUrl, options.summaryListLimit);
     }
     if (totalRedCount > 0) {
         const cveMessage = `Found ${totalRedCount} package(s) with known CVEs (${result.redCount} in changes, ${result.existingRedCount} existing). Download the **${options.artifactName}** artifact from this workflow run for details.`;
@@ -168,6 +172,8 @@ async function runDiffAnalysis(options) {
             projectName: options.projectName,
             includeHackerNews: options.includeHackerNews,
             auditExisting: false,
+            enrichmentLimit: options.enrichmentLimit,
+            enrichmentConcurrency: options.enrichmentConcurrency,
         });
         const reportPath = writeReport(result, options.outputDir);
         const baseCommit = resolved.source === "git" ? resolved.baseRef : undefined;
@@ -212,6 +218,10 @@ async function main() {
         const reportRunId = core.getInput("report-run-id") || undefined;
         const reportCommitTitle = core.getInput("report-commit-title") || undefined;
         const reportBaseCommit = core.getInput("report-base-commit") || undefined;
+        const enrichmentLimit = Number.parseInt(core.getInput("enrichment-limit") || String(DEFAULT_ENRICHMENT_LIMIT), 10);
+        const enrichmentConcurrency = Number.parseInt(core.getInput("enrichment-concurrency") ||
+            String(DEFAULT_ENRICHMENT_CONCURRENCY), 10);
+        const summaryListLimit = Number.parseInt(core.getInput("summary-list-limit") || String(DEFAULT_SUMMARY_LIST_LIMIT), 10);
         const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
         await runAction({
             lockfilePath,
@@ -237,6 +247,9 @@ async function main() {
             reportRunId,
             reportCommitTitle,
             reportBaseCommit,
+            enrichmentLimit,
+            enrichmentConcurrency,
+            summaryListLimit,
         });
     }
     catch (error) {

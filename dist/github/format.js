@@ -1,6 +1,11 @@
 import { formatBreadcrumb } from "../lockfile/parse.js";
+export const DEFAULT_SUMMARY_LIST_LIMIT = 100;
 export function formatChangeLine(change) {
-    const icon = change.securityLevel === "red" ? "🔴" : "🟡";
+    const icon = change.manualReview
+        ? "❓"
+        : change.securityLevel === "red"
+            ? "🔴"
+            : "🟡";
     const versions = change.oldVersion === null
         ? `(added) → ${change.newVersion}`
         : `${change.oldVersion} → ${change.newVersion}`;
@@ -38,7 +43,7 @@ function escapeHtml(value) {
 function escapeHtmlAttr(value) {
     return escapeHtml(value).replaceAll("'", "&#39;");
 }
-export function buildPullRequestComment(result, artifactName, reportUrl) {
+export function buildPullRequestComment(result, artifactName, reportUrl, summaryListLimit = DEFAULT_SUMMARY_LIST_LIMIT) {
     const lines = [
         "## Package lock analysis",
         "",
@@ -48,14 +53,29 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
         `| Known CVE in changes | ${result.redCount} |`,
         `| Review (yellow) | ${result.yellowCount} |`,
     ];
+    if (result.manualReviewCount > 0) {
+        lines.push(`| Manual review (❓) | ${result.manualReviewCount} |`);
+    }
     if (result.auditedExisting) {
         lines.push(`| Existing CVE | ${result.existingRedCount} |`);
     }
     lines.push("", "");
+    if (result.enrichmentLimited) {
+        lines.push(`> More than ${result.enrichmentLimit} packages changed — CVE and changelog lookups were skipped. Rows marked ❓ need manual review via npm links in the full report.`, "");
+    }
     if (result.changedCount > 0) {
         lines.push("### Updated packages", "");
-        for (const change of result.changes) {
+        const listedChanges = result.changes.slice(0, summaryListLimit);
+        for (const change of listedChanges) {
             lines.push(formatChangeLine(change));
+            if (change.manualReview) {
+                const npmLink = change.references.links[0];
+                if (npmLink) {
+                    lines.push(`  - [${npmLink.label}](${npmLink.url})`);
+                }
+                lines.push("");
+                continue;
+            }
             if (change.cves.length > 0) {
                 lines.push(`  - CVEs: ${change.cves.map((cve) => `[${cve.id}](${cve.url})`).join(", ")}`);
             }
@@ -66,6 +86,9 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
                 lines.push(`  - ${referenceLinks}`);
             }
             lines.push("");
+        }
+        if (result.changedCount > summaryListLimit) {
+            lines.push(`_Showing ${summaryListLimit} of ${result.changedCount} changes. Open the HTML report for the full list._`, "");
         }
     }
     else {
@@ -87,21 +110,33 @@ export function buildSummaryRows(result) {
         ["Known CVE in changes", String(result.redCount)],
         ["Review (yellow)", String(result.yellowCount)],
     ];
+    if (result.manualReviewCount > 0) {
+        rows.push(["Manual review", String(result.manualReviewCount)]);
+    }
     if (result.auditedExisting) {
         rows.push(["Existing CVE", String(result.existingRedCount)]);
     }
     return rows;
 }
-export function buildSummaryChangeList(result) {
+export function buildSummaryChangeList(result, summaryListLimit = DEFAULT_SUMMARY_LIST_LIMIT) {
     if (result.changedCount === 0) {
         return [];
     }
-    return result.changes.map((change) => {
-        const label = change.securityLevel === "red" ? "CVE" : "Review";
+    const listed = result.changes.slice(0, summaryListLimit);
+    const lines = listed.map((change) => {
+        const label = change.manualReview
+            ? "Manual"
+            : change.securityLevel === "red"
+                ? "CVE"
+                : "Review";
         const versions = change.oldVersion === null
             ? `(added) → ${change.newVersion}`
             : `${change.oldVersion} → ${change.newVersion}`;
         return `[${label}] ${formatBreadcrumb(change.breadcrumb)} — ${versions}`;
     });
+    if (result.changedCount > summaryListLimit) {
+        lines.push(`… and ${result.changedCount - summaryListLimit} more (see HTML report)`);
+    }
+    return lines;
 }
 //# sourceMappingURL=format.js.map

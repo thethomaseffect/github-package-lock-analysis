@@ -22,6 +22,9 @@ export interface RunActionOptions {
     reportRunId?: string;
     reportCommitTitle?: string;
     reportBaseCommit?: string;
+    enrichmentLimit: number;
+    enrichmentConcurrency: number;
+    summaryListLimit: number;
 }
 export declare function runAction(options: RunActionOptions): Promise<string | null>;
 //# sourceMappingURL=index.d.ts.map

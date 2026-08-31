@@ -56,6 +56,8 @@ export interface PackageChange {
   oldVersion: string | null;
   newVersion: string;
   securityLevel: SecurityLevel;
+  /** True when enrichment was skipped — reviewer must follow links manually. */
+  manualReview?: boolean;
   cves: CveReference[];
   hackerNews: HackerNewsReference[];
   references: PackageReferences;
@@ -77,6 +79,9 @@ export interface AnalysisResult {
   changedCount: number;
   redCount: number;
   yellowCount: number;
+  manualReviewCount: number;
+  enrichmentLimited: boolean;
+  enrichmentLimit: number;
   existingVulnerabilities: ExistingVulnerability[];
   existingRedCount: number;
   auditedExisting: boolean;
@@ -88,4 +93,8 @@ export interface AnalysisOptions {
   auditExisting?: boolean;
   excludeLockPaths?: Set<string>;
   auditConcurrency?: number;
+  /** Max changes to enrich with CVE/changelog lookups; above this, rows are manual-review only. */
+  enrichmentLimit?: number;
+  /** Concurrent enrichment requests when under enrichmentLimit. */
+  enrichmentConcurrency?: number;
 }
