@@ -25,7 +25,25 @@ export function upsertReportEntry(manifest, entry) {
     const reports = manifest.reports.filter((item) => item.runId !== entry.runId);
     reports.unshift(entry);
     return {
-        latestReportCommit: entry.commit,
+        latestReportCommit: entry.commit || manifest.latestReportCommit,
+        reports,
+    };
+}
+export function mergeReportEntries(...entryGroups) {
+    const merged = new Map();
+    for (const entries of entryGroups) {
+        for (const entry of entries) {
+            if (!entry.runId) {
+                continue;
+            }
+            merged.set(entry.runId, entry);
+        }
+    }
+    return [...merged.values()].sort((left, right) => right.generatedAt.localeCompare(left.generatedAt));
+}
+export function buildManifestFromEntries(reports) {
+    return {
+        latestReportCommit: reports[0]?.commit ?? "",
         reports,
     };
 }
@@ -103,7 +121,7 @@ export function buildContentsIndexHtml(manifest, repositoryUrl) {
   </head>
   <body>
     <h1>Lockfile reports</h1>
-    <p class="muted">Each workflow run publishes a unique report. Diff baselines use the most recent reported commit.</p>
+    <p class="muted">Every workflow run is listed below, including multiple runs for the same commit. Diff baselines use the most recent reported commit.</p>
     <table>
       <thead>
         <tr>

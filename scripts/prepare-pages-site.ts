@@ -2,7 +2,9 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -10,13 +12,16 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildContentsIndexHtml,
+  buildManifestFromEntries,
   buildReportPageUrl,
   createEmptyManifest,
+  mergeReportEntries,
   parseReportManifest,
   upsertReportEntry,
   type ReportManifest,
+  type ReportManifestEntry,
 } from "../src/report-manifest.js";
-import { parseReportMeta } from "../src/report-meta.js";
+import { parseReportMeta, type ReportMeta } from "../src/report-meta.js";
 
 export interface PreparePagesSiteOptions {
   siteDir: string;
@@ -33,6 +38,69 @@ function loadManifest(siteDir: string): ReportManifest {
   }
 
   return parseReportManifest(readFileSync(manifestPath, "utf8"));
+}
+
+function metaToManifestEntry(meta: ReportMeta, pagesBaseUrl: string): ReportManifestEntry {
+  return {
+    runId: meta.runId,
+    commit: meta.commit,
+    baseCommit: meta.baseCommit,
+    commitTitle: meta.commitTitle,
+    changedCount: meta.changedCount,
+    issueCount: meta.issueCount,
+    generatedAt: meta.generatedAt,
+    url: buildReportPageUrl(pagesBaseUrl, meta.runId),
+    workflowRunUrl: meta.workflowRunUrl,
+  };
+}
+
+function loadReportMetaFromSite(
+  siteDir: string,
+  runId: string,
+  pagesBaseUrl: string,
+): ReportManifestEntry | null {
+  const metaPath = join(siteDir, "reports", runId, "report-meta.json");
+  if (existsSync(metaPath)) {
+    return metaToManifestEntry(
+      parseReportMeta(readFileSync(metaPath, "utf8")),
+      pagesBaseUrl,
+    );
+  }
+
+  const reportPath = join(siteDir, "reports", runId, "index.html");
+  if (!existsSync(reportPath)) {
+    return null;
+  }
+
+  return {
+    runId,
+    commit: "",
+    commitTitle: "Report (metadata unavailable)",
+    changedCount: 0,
+    issueCount: 0,
+    generatedAt: statSync(reportPath).mtime.toISOString(),
+    url: buildReportPageUrl(pagesBaseUrl, runId),
+  };
+}
+
+function reconcileManifestWithSite(
+  manifest: ReportManifest,
+  siteDir: string,
+  pagesBaseUrl: string,
+): ReportManifest {
+  const reportsDir = join(siteDir, "reports");
+  if (!existsSync(reportsDir)) {
+    return manifest;
+  }
+
+  const discovered = readdirSync(reportsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => loadReportMetaFromSite(siteDir, entry.name, pagesBaseUrl))
+    .filter((entry): entry is ReportManifestEntry => entry !== null);
+
+  return buildManifestFromEntries(
+    mergeReportEntries(manifest.reports, discovered),
+  );
 }
 
 function writeManifest(siteDir: string, manifest: ReportManifest): void {
@@ -62,18 +130,17 @@ export function preparePagesSite(options: PreparePagesSiteOptions): {
   const reportDir = join(options.siteDir, "reports", meta.runId);
   mkdirSync(reportDir, { recursive: true });
   copyFileSync(options.reportFile, join(reportDir, "index.html"));
+  copyFileSync(options.metaFile, join(reportDir, "report-meta.json"));
 
-  const manifest = upsertReportEntry(loadManifest(options.siteDir), {
-    runId: meta.runId,
-    commit: meta.commit,
-    baseCommit: meta.baseCommit,
-    commitTitle: meta.commitTitle,
-    changedCount: meta.changedCount,
-    issueCount: meta.issueCount,
-    generatedAt: meta.generatedAt,
-    url: reportUrl,
-    workflowRunUrl: meta.workflowRunUrl,
-  });
+  const reconciled = reconcileManifestWithSite(
+    loadManifest(options.siteDir),
+    options.siteDir,
+    options.pagesBaseUrl,
+  );
+  const manifest = upsertReportEntry(
+    reconciled,
+    metaToManifestEntry(meta, options.pagesBaseUrl),
+  );
 
   writeManifest(options.siteDir, manifest);
   writeRootIndex(options.siteDir, manifest, options.repositoryUrl);

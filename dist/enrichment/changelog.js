@@ -209,7 +209,7 @@ export async function resolvePackageReferences(packageName, version) {
         if (gitHead) {
             links.push({
                 url: buildGitHubCommitUrl(github.owner, github.repo, gitHead),
-                label: "Publish commit",
+                label: `Git commit for ${version}`,
                 kind: "commit",
             });
         }

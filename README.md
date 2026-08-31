@@ -163,7 +163,7 @@ Set `skip-if-unchanged: true` (default) to exit early when git reports no diff f
 
 ### Tier 2 — GitHub Pages (public retained reports)
 
-Each workflow run publishes a unique report under **`/reports/<workflow-run-id>/`**. The site root is a contents page listing every report (commit range, run id, title, change counts, issue counts). Individual reports link back to the index.
+Each workflow run publishes a unique report under **`/reports/<workflow-run-id>/`**. The site root lists **every** workflow run, including multiple runs for the same commit. Individual reports link back to the index.
 
 **One-time repo setup**
 

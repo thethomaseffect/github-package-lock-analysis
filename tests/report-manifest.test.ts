@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildContentsIndexHtml,
   buildReportPageUrl,
+  createEmptyManifest,
+  mergeReportEntries,
   resolveManifestBaseRef,
   upsertReportEntry,
 } from "../src/report-manifest.js";
@@ -100,6 +102,42 @@ describe("report manifest", () => {
     expect(html).toContain("https://github.com/org/repo/commit/aaa111bbb222");
     expect(html).toContain("https://github.com/org/repo/commit/abc123def456");
     expect(html).toContain("https://github.com/org/repo/actions/runs/999");
+  });
+
+  it("retains multiple workflow runs for the same commit", () => {
+    const first = upsertReportEntry(createEmptyManifest(), sampleEntry({
+      runId: "run-a",
+      commit: "same-commit",
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    }));
+    const second = upsertReportEntry(first, sampleEntry({
+      runId: "run-b",
+      commit: "same-commit",
+      generatedAt: "2026-02-01T00:00:00.000Z",
+    }));
+
+    expect(second.reports).toHaveLength(2);
+    expect(second.reports.every((entry) => entry.commit === "same-commit")).toBe(true);
+
+    const html = buildContentsIndexHtml(second, "https://github.com/org/repo");
+    expect(html).toContain("./reports/run-a/");
+    expect(html).toContain("./reports/run-b/");
+  });
+
+  it("merges manifest entries by run id without deduplicating commits", () => {
+    const merged = mergeReportEntries(
+      [
+        sampleEntry({ runId: "111", commit: "abc", generatedAt: "2026-01-02T00:00:00.000Z" }),
+      ],
+      [
+        sampleEntry({ runId: "222", commit: "abc", generatedAt: "2026-01-01T00:00:00.000Z" }),
+        sampleEntry({ runId: "111", commit: "abc", generatedAt: "2026-01-03T00:00:00.000Z" }),
+      ],
+    );
+
+    expect(merged).toHaveLength(2);
+    expect(merged[0]?.runId).toBe("111");
+    expect(merged[1]?.runId).toBe("222");
   });
 
   it("shows a single commit link when no base commit is recorded", () => {

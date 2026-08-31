@@ -76,7 +76,7 @@ describe("resolvePackageReferences", () => {
     vi.restoreAllMocks();
   });
 
-  it("includes npm version, changelog, and publish commit links", async () => {
+  it("includes npm version, changelog, and git commit links", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
 
@@ -140,7 +140,7 @@ describe("resolvePackageReferences", () => {
     });
     expect(references.links[2]).toMatchObject({
       kind: "commit",
-      label: "Publish commit",
+      label: "Git commit for 4.17.15",
       url: "https://github.com/lodash/lodash/commit/abc123def456",
     });
   });
