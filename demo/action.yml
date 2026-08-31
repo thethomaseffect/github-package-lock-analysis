@@ -53,7 +53,9 @@ runs:
   using: composite
   steps:
     - id: analyze
-      uses: ..
+      # Local path must start with ./ — GitHub rejects ".." as an action ref.
+      # Resolves to the repo-root action after checkout (this wrapper is in-repo only).
+      uses: ./
       with:
         old-lockfile-path: fixtures/sample-project/before/package-lock.json
         new-lockfile-path: fixtures/sample-project/after/package-lock.json
