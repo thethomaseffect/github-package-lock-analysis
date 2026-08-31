@@ -60,6 +60,7 @@ jobs:
           project-name: sample-project
           post-pr-comment: false
           skip-if-unchanged: false
+          fail-on-red: false
           pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           report-commit: ${{ github.sha }}
           report-commit-title: ${{ steps.commit-meta.outputs.title }}
