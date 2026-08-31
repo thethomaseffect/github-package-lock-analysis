@@ -9,7 +9,7 @@ Supply-chain attacks often land in **nested transitive dependencies** — packag
 - First-party application code
 - Direct dependencies declared in `package.json`
 
-This GitHub Action closes that gap by diffing lockfile changes, enriching every version bump with CVE and optional Hacker News signals, and publishing a static report so reviewers can see **exactly which nested packages changed** before merge.
+This GitHub Action closes that gap by diffing lockfile changes, enriching every version bump with CVE data, and publishing a static report so reviewers can see **exactly which nested packages changed** before merge.
 
 ## High-level flow
 
@@ -22,15 +22,15 @@ This GitHub Action closes that gap by diffing lockfile changes, enriching every 
                     ┌───────────────────────────────────────────────┘
                     ▼
 ┌─────────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│ Query CVE database  │────▶│ Optional HN lookup   │────▶│ Build static React  │
-│ (e.g. NVD)          │     │                      │     │ report page         │
+│ Query CVE database  │────▶│ Changelog / npm refs │────▶│ Build static React  │
+│ (e.g. OSV / NVD)    │     │                      │     │ report page         │
 └─────────────────────┘     └──────────────────────┘     └─────────────────────┘
 ```
 
 1. **Trigger** — Runs in GitHub Actions when `package-lock.json` changes (typically on pull requests).
 2. **Diff** — Compare the previous lockfile (base branch or prior commit) with the current one.
 3. **Extract changes** — For every package whose resolved version changed, record: name, old version, new version, and dependency path from root.
-4. **Enrich** — Look up CVEs for the package/version range and optionally search Hacker News for related discussion.
+4. **Enrich** — Look up CVEs for the package/version range and resolve changelog/npm links.
 5. **Report** — Generate a static HTML page (React, built to static assets) and publish it as a workflow artifact or GitHub Pages deployment.
 6. **Cleanup** — Temporary files and test fixtures are created dynamically and removed after the run; no `npm install` is executed against malicious lockfile data in production flows.
 
@@ -80,10 +80,6 @@ For each updated package, include a **best-effort changelog URL**:
 
 Links are hints for reviewers, not guarantees.
 
-### Optional Hacker News enrichment
-
-When enabled, query Hacker News (Algolia HN API or similar) for package name + version or security-related keywords. Surface title, date, and link as supplementary context — never as sole evidence of compromise.
-
 ## Architecture (intended)
 
 ```
@@ -97,7 +93,7 @@ When enabled, query Hacker News (Algolia HN API or similar) for package name + v
 │   │   └── types.ts
 │   ├── enrichment/
 │   │   ├── cve.ts          # NVD / OSV queries
-│   │   └── hackernews.ts   # Optional HN search
+│   │   └── changelog.ts    # Changelog / npm links
 │   └── report/
 │       ├── build.tsx       # React report generator
 │       └── components/     # Functional React components
@@ -118,7 +114,7 @@ When enabled, query Hacker News (Algolia HN API or similar) for package name + v
 
 ### GitHub Action behaviour
 
-- Inputs: paths to old/new lockfiles (or let action fetch base/head from git), flags for HN enrichment, output directory.
+- Inputs: paths to old/new lockfiles (or let action fetch base/head from git), enrichment limits, output directory.
 - Outputs: path to generated report, summary counts (changed packages, red/yellow counts).
 - Permissions: `contents: read` minimum; optional `pages: write` if publishing.
 
@@ -143,7 +139,7 @@ Never commit live malware samples. Use known CVE-affected versions for red-path 
 ## Security & safety notes
 
 - Parsing lockfiles is read-only JSON — low risk.
-- CVE/HN calls are outbound HTTP — rate-limit and cache responses within a single workflow run.
+- CVE and changelog calls are outbound HTTP — rate-limit and cache responses within a single workflow run.
 - Do not execute postinstall scripts or `npm ci` on PR lockfiles in untrusted forks without explicit opt-in.
 - Sanitize package names before embedding in HTML report.
 

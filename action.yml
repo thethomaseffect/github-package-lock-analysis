@@ -27,10 +27,6 @@ inputs:
     description: Directory where the static HTML report is written
     required: false
     default: report-output
-  include-hackernews:
-    description: Whether to include optional Hacker News enrichment
-    required: false
-    default: "false"
   project-name:
     description: Display name for the project root in breadcrumb paths
     required: false

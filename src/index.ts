@@ -35,7 +35,6 @@ export interface RunActionOptions {
   baseRef?: string;
   headRef?: string;
   outputDir: string;
-  includeHackerNews: boolean;
   projectName?: string;
   skipIfUnchanged: boolean;
   auditExisting: boolean;
@@ -229,7 +228,6 @@ async function runManualAuditOnly(options: RunActionOptions): Promise<string> {
   const lockfile = readLockfileFromPath(lockfilePath);
   const result = await analyzeLockfileChanges(lockfile, lockfile, {
     projectName: options.projectName,
-    includeHackerNews: options.includeHackerNews,
     auditExisting: true,
     excludeLockPaths: new Set(),
   });
@@ -290,7 +288,6 @@ async function runDiffAnalysis(options: RunActionOptions): Promise<string | null
 
     const result = await analyzeLockfileChanges(oldLockfile, newLockfile, {
       projectName: options.projectName,
-      includeHackerNews: options.includeHackerNews,
       auditExisting: false,
       enrichmentLimit: options.enrichmentLimit,
       enrichmentConcurrency: options.enrichmentConcurrency,
@@ -342,7 +339,6 @@ async function main(): Promise<void> {
     const baseRef = core.getInput("base-ref") || undefined;
     const headRef = core.getInput("head-ref") || undefined;
     const outputDir = core.getInput("output-dir") || "report-output";
-    const includeHackerNews = core.getBooleanInput("include-hackernews");
     const projectName = core.getInput("project-name") || undefined;
     const skipIfUnchanged = core.getBooleanInput("skip-if-unchanged");
     const auditExisting = core.getBooleanInput("audit-existing");
@@ -379,7 +375,6 @@ async function main(): Promise<void> {
       baseRef,
       headRef,
       outputDir,
-      includeHackerNews,
       projectName,
       skipIfUnchanged,
       auditExisting,

@@ -2,7 +2,7 @@
 
 A GitHub Action that reviews **nested dependency changes** in `package-lock.json` — the updates most security tools never surface.
 
-When a pull request changes the lockfile, this action diffs old vs new, looks up CVE data (and optionally Hacker News), and publishes a **static report** so reviewers can see exactly which transitive packages moved and whether known vulnerabilities apply.
+When a pull request changes the lockfile, this action diffs old vs new, looks up CVE data, and publishes a **static report** so reviewers can see exactly which transitive packages moved and whether known vulnerabilities apply.
 
 ## The problem
 
@@ -23,8 +23,6 @@ They rarely give you a readable audit of **every lockfile version bump** on a PR
 6. Optionally posts a PR comment and uploads the HTML report as a workflow artifact
 
 ### Report layout
-
-Paths read like a directory breadcrumb, not a tree widget:
 
 ```
 sample-project > cheerio > lodash
@@ -53,7 +51,7 @@ Unchanged packages are omitted.
 │   ├── git/                                # Auto-resolve base/head lockfiles
 │   ├── github/                             # PR comments & summary formatting
 │   ├── lockfile/                           # Parse & diff package-lock.json
-│   ├── enrichment/                         # CVE (OSV), Hacker News, URLs
+│   ├── enrichment/                         # CVE (OSV) and changelog URLs
 │   └── report/                             # React static HTML report
 ├── fixtures/sample-project/                # Safe before/after lockfile pairs
 ├── scripts/
@@ -411,7 +409,7 @@ Alternatively, analyze on merge to `main` only (Tier 2 push trigger) and keep PR
 | `new-lockfile-path` | *(auto)* | Override head lockfile path |
 | `base-ref` / `head-ref` | *(auto)* | Git refs when resolving from history |
 | `output-dir` | `report-output` | Directory for HTML report and `report-meta.json` |
-| `include-hackernews` | `false` | Add Hacker News links |
+| `project-name` | *(empty)* | Display name for the project root in breadcrumb paths |
 | `post-pr-comment` | `true` | Post/update PR summary comment |
 | `skip-if-unchanged` | `true` | Skip when git diff is empty |
 | `fail-on-red` | `true` | Fail the job when known CVEs are found |

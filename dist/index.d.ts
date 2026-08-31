@@ -5,7 +5,6 @@ export interface RunActionOptions {
     baseRef?: string;
     headRef?: string;
     outputDir: string;
-    includeHackerNews: boolean;
     projectName?: string;
     skipIfUnchanged: boolean;
     auditExisting: boolean;

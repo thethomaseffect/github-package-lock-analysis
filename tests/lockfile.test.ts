@@ -84,7 +84,6 @@ describe("buildReportHtml", () => {
               url: "https://nvd.nist.gov/vuln/detail/CVE-2020-8203",
             },
           ],
-          hackerNews: [],
           references: {
             links: [
               {

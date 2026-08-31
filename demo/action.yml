@@ -62,7 +62,6 @@ runs:
         post-pr-comment: false
         skip-if-unchanged: false
         fail-on-red: false
-        include-hackernews: false
         pages-base-url: ${{ inputs.pages-base-url }}
         report-commit: ${{ inputs.report-commit }}
         report-base-commit: ${{ inputs.report-base-commit }}

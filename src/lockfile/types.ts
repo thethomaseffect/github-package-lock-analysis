@@ -32,12 +32,6 @@ export interface CveReference {
   summary?: string;
 }
 
-export interface HackerNewsReference {
-  title: string;
-  url: string;
-  date: string;
-}
-
 export interface ReferenceLink {
   url: string;
   label: string;
@@ -59,7 +53,6 @@ export interface PackageChange {
   /** True when enrichment was skipped — reviewer must follow links manually. */
   manualReview?: boolean;
   cves: CveReference[];
-  hackerNews: HackerNewsReference[];
   references: PackageReferences;
 }
 
@@ -89,7 +82,6 @@ export interface AnalysisResult {
 
 export interface AnalysisOptions {
   projectName?: string;
-  includeHackerNews?: boolean;
   auditExisting?: boolean;
   excludeLockPaths?: Set<string>;
   auditConcurrency?: number;

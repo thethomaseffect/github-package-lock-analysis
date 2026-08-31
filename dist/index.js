@@ -125,7 +125,6 @@ async function runManualAuditOnly(options) {
     const lockfile = readLockfileFromPath(lockfilePath);
     const result = await analyzeLockfileChanges(lockfile, lockfile, {
         projectName: options.projectName,
-        includeHackerNews: options.includeHackerNews,
         auditExisting: true,
         excludeLockPaths: new Set(),
     });
@@ -170,7 +169,6 @@ async function runDiffAnalysis(options) {
         const newLockfile = readLockfileFromPath(resolved.newPath);
         const result = await analyzeLockfileChanges(oldLockfile, newLockfile, {
             projectName: options.projectName,
-            includeHackerNews: options.includeHackerNews,
             auditExisting: false,
             enrichmentLimit: options.enrichmentLimit,
             enrichmentConcurrency: options.enrichmentConcurrency,
@@ -203,7 +201,6 @@ async function main() {
         const baseRef = core.getInput("base-ref") || undefined;
         const headRef = core.getInput("head-ref") || undefined;
         const outputDir = core.getInput("output-dir") || "report-output";
-        const includeHackerNews = core.getBooleanInput("include-hackernews");
         const projectName = core.getInput("project-name") || undefined;
         const skipIfUnchanged = core.getBooleanInput("skip-if-unchanged");
         const auditExisting = core.getBooleanInput("audit-existing");
@@ -230,7 +227,6 @@ async function main() {
             baseRef,
             headRef,
             outputDir,
-            includeHackerNews,
             projectName,
             skipIfUnchanged,
             auditExisting,

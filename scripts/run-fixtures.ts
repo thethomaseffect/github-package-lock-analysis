@@ -34,7 +34,6 @@ async function main(): Promise<void> {
 
   const result = await analyzeLockfileChanges(oldLockfile, newLockfile, {
     projectName: "sample-project",
-    includeHackerNews: false,
   });
 
   const reportPath = writeReport(result, outputDir);

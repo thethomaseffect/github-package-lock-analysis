@@ -84,7 +84,6 @@ describe("manual review presentation", () => {
       securityLevel: "yellow",
       manualReview: true,
       cves: [],
-      hackerNews: [],
       references: buildMinimalPackageReferences("lodash", "4.17.15"),
     });
 
@@ -97,7 +96,6 @@ describe("manual review presentation", () => {
       securityLevel: "yellow" as const,
       manualReview: true,
       cves: [],
-      hackerNews: [],
       references: buildMinimalPackageReferences(change.name, change.newVersion),
     }));
 
@@ -163,7 +161,6 @@ describe("manual review presentation", () => {
           securityLevel: "yellow",
           manualReview: true,
           cves: [],
-          hackerNews: [],
           references: buildMinimalPackageReferences("lodash", "2.0.0"),
         },
       ],

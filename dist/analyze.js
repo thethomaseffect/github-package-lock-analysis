@@ -3,16 +3,12 @@ import { auditExistingVulnerabilities } from "./audit-existing.js";
 import { buildMinimalPackageReferences } from "./enrichment/minimal-references.js";
 import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
-import { lookupHackerNews } from "./enrichment/hackernews.js";
 import { diffLockfiles } from "./lockfile/diff.js";
 export const DEFAULT_ENRICHMENT_LIMIT = 500;
 export const DEFAULT_ENRICHMENT_CONCURRENCY = 8;
-async function enrichChange(change, includeHackerNews) {
-    const [cves, hackerNews, references] = await Promise.all([
+async function enrichChange(change) {
+    const [cves, references] = await Promise.all([
         lookupCves(change.name, change.newVersion),
-        includeHackerNews
-            ? lookupHackerNews(change.name, change.newVersion)
-            : Promise.resolve([]),
         resolvePackageReferences(change.name, change.newVersion),
     ]);
     const securityLevel = cves.length > 0 ? "red" : "yellow";
@@ -20,7 +16,6 @@ async function enrichChange(change, includeHackerNews) {
         ...change,
         securityLevel,
         cves,
-        hackerNews,
         references,
     };
 }
@@ -30,7 +25,6 @@ function toManualReviewChange(change) {
         securityLevel: "yellow",
         manualReview: true,
         cves: [],
-        hackerNews: [],
         references: buildMinimalPackageReferences(change.name, change.newVersion),
     };
 }
@@ -58,7 +52,7 @@ export async function analyzeLockfileChanges(oldLockfile, newLockfile, options =
     const enrichmentLimited = rawChanges.length > enrichmentLimit;
     const changes = enrichmentLimited
         ? rawChanges.map(toManualReviewChange)
-        : await mapWithConcurrency(rawChanges, enrichmentConcurrency, (change) => enrichChange(change, options.includeHackerNews ?? false));
+        : await mapWithConcurrency(rawChanges, enrichmentConcurrency, (change) => enrichChange(change));
     const { redCount, yellowCount, manualReviewCount } = summarizeChanges(changes);
     const projectName = options.projectName ??
         newLockfile.packages?.[""]?.name ??

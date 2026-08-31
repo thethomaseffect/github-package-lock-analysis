@@ -57,18 +57,6 @@ export function PackageRow({ change }: PackageRowProps) {
           </span>
         ))}
       </p>
-      {change.hackerNews.length > 0 ? (
-        <ul className="hn-list">
-          {change.hackerNews.map((item) => (
-            <li key={item.url}>
-              <a href={item.url} target="_blank" rel="noopener noreferrer">
-                {item.title}
-              </a>{" "}
-              <span className="muted">({item.date})</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </article>
   );
 }

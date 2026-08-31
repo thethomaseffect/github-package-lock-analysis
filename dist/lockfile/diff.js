@@ -45,7 +45,6 @@ export function toUnenrichedChanges(rawChanges) {
         ...change,
         securityLevel: "yellow",
         cves: [],
-        hackerNews: [],
         references: { links: [] },
     }));
 }

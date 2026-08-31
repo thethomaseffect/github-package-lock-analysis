@@ -124,10 +124,6 @@ export const reportStyles = `
   .muted {
     color: #94a3b8;
   }
-  .hn-list {
-    margin: 0.5rem 0 0;
-    padding-left: 1.25rem;
-  }
   .empty {
     color: #94a3b8;
   }

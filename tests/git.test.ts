@@ -92,7 +92,6 @@ describe("buildPullRequestComment", () => {
               url: "https://nvd.nist.gov/vuln/detail/CVE-2020-8203",
             },
           ],
-          hackerNews: [],
           references: {
             links: [
               {
@@ -112,7 +111,6 @@ describe("buildPullRequestComment", () => {
           newVersion: "0.6.2",
           securityLevel: "yellow",
           cves: [],
-          hackerNews: [],
           references: {
             links: [
               {

@@ -3,7 +3,6 @@ import { auditExistingVulnerabilities } from "./audit-existing.js";
 import { buildMinimalPackageReferences } from "./enrichment/minimal-references.js";
 import { resolvePackageReferences } from "./enrichment/changelog.js";
 import { lookupCves } from "./enrichment/cve.js";
-import { lookupHackerNews } from "./enrichment/hackernews.js";
 import { diffLockfiles, type RawPackageChange } from "./lockfile/diff.js";
 import type {
   AnalysisOptions,
@@ -16,15 +15,9 @@ import type {
 export const DEFAULT_ENRICHMENT_LIMIT = 500;
 export const DEFAULT_ENRICHMENT_CONCURRENCY = 8;
 
-async function enrichChange(
-  change: RawPackageChange,
-  includeHackerNews: boolean,
-): Promise<PackageChange> {
-  const [cves, hackerNews, references] = await Promise.all([
+async function enrichChange(change: RawPackageChange): Promise<PackageChange> {
+  const [cves, references] = await Promise.all([
     lookupCves(change.name, change.newVersion),
-    includeHackerNews
-      ? lookupHackerNews(change.name, change.newVersion)
-      : Promise.resolve([]),
     resolvePackageReferences(change.name, change.newVersion),
   ]);
 
@@ -34,7 +27,6 @@ async function enrichChange(
     ...change,
     securityLevel,
     cves,
-    hackerNews,
     references,
   };
 }
@@ -45,7 +37,6 @@ function toManualReviewChange(change: RawPackageChange): PackageChange {
     securityLevel: "yellow",
     manualReview: true,
     cves: [],
-    hackerNews: [],
     references: buildMinimalPackageReferences(change.name, change.newVersion),
   };
 }
@@ -95,7 +86,7 @@ export async function analyzeLockfileChanges(
     : await mapWithConcurrency(
         rawChanges,
         enrichmentConcurrency,
-        (change) => enrichChange(change, options.includeHackerNews ?? false),
+        (change) => enrichChange(change),
       );
 
   const { redCount, yellowCount, manualReviewCount } = summarizeChanges(changes);

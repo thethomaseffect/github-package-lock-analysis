@@ -70,7 +70,6 @@ export function toUnenrichedChanges(rawChanges: RawPackageChange[]): PackageChan
     ...change,
     securityLevel: "yellow" as const,
     cves: [],
-    hackerNews: [],
     references: { links: [] },
   }));
 }

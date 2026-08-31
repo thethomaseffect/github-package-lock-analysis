@@ -8,11 +8,6 @@ on:
         required: false
         type: string
         default: package-lock.json
-      include-hackernews:
-        description: Include Hacker News enrichment
-        required: false
-        type: boolean
-        default: false
       project-name:
         description: Display name for breadcrumb root
         required: false
@@ -55,7 +50,6 @@ jobs:
         uses: thethomaseffect/github-package-lock-analysis@v1
         with:
           lockfile-path: ${{ inputs.lockfile-path }}
-          include-hackernews: ${{ inputs.include-hackernews }}
           project-name: ${{ inputs.project-name }}
           post-pr-comment: ${{ inputs.post-pr-comment }}
 
