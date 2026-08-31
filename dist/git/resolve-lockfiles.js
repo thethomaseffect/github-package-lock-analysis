@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as github from "@actions/github";
+import { isGitAncestor, readReportManifest } from "./manifest.js";
+import { resolveManifestBaseRef } from "../report-manifest.js";
 export function resolveBaseRefFromContext(context, override) {
     if (override?.trim()) {
         return override.trim();
@@ -30,6 +32,19 @@ export function resolveHeadRefFromContext(context, override) {
         return pullRequest?.head?.sha ?? context.sha;
     }
     return context.sha;
+}
+export function resolveBaseRefWithManifest(context, headRef, workspace, override, reportManifestPath, useReportManifestBase) {
+    if (override?.trim()) {
+        return override.trim();
+    }
+    if (useReportManifestBase && reportManifestPath) {
+        const manifest = readReportManifest(reportManifestPath);
+        const manifestBase = resolveManifestBaseRef(manifest, headRef, (ancestor, descendant) => isGitAncestor(ancestor, descendant, workspace));
+        if (manifestBase) {
+            return manifestBase;
+        }
+    }
+    return resolveBaseRefFromContext(context);
 }
 export function gitShow(ref, filePath, workspace) {
     try {
@@ -67,8 +82,8 @@ export function resolveLockfiles(options) {
         };
     }
     const context = github.context;
-    const baseRef = resolveBaseRefFromContext(context, options.baseRef);
     const headRef = resolveHeadRefFromContext(context, options.headRef);
+    const baseRef = resolveBaseRefWithManifest(context, headRef, workspace, options.baseRef, options.reportManifestPath, options.useReportManifestBase);
     if (!baseRef) {
         throw new Error("Could not determine base ref. Provide old-lockfile-path or base-ref, or run on pull_request/push events.");
     }
@@ -107,6 +122,9 @@ export function resolveLockfiles(options) {
 }
 export function shouldSkipUnchangedLockfile(skipIfUnchanged, resolved, lockfilePath, workspace) {
     if (!skipIfUnchanged || resolved.source !== "git" || !resolved.baseRef || !resolved.headRef) {
+        return false;
+    }
+    if (resolved.baseRef === resolved.headRef) {
         return false;
     }
     return !lockfileChangedInGit(resolved.baseRef, resolved.headRef, lockfilePath, workspace);

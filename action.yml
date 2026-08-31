@@ -51,6 +51,30 @@ inputs:
     description: Optional public URL to the HTML report (e.g. GitHub Pages) included in PR comments
     required: false
     default: ""
+  report-manifest-path:
+    description: Path to reports/manifest.json from a checked-out gh-pages site (enables manifest-based diff base)
+    required: false
+    default: ""
+  use-report-manifest-base:
+    description: Compare HEAD against the latest commit in report-manifest-path instead of push before or PR base
+    required: false
+    default: "false"
+  pages-base-url:
+    description: GitHub Pages base URL used to build report-url output (e.g. https://owner.github.io/repo)
+    required: false
+    default: ""
+  report-commit:
+    description: Commit SHA analyzed for this report (defaults to head-ref or GITHUB_SHA)
+    required: false
+    default: ""
+  report-run-id:
+    description: Workflow run ID used in report-url paths (defaults to GITHUB_RUN_ID)
+    required: false
+    default: ""
+  report-commit-title:
+    description: Commit message title shown on the reports index page
+    required: false
+    default: ""
   audit-existing:
     description: Manual workflow_dispatch only — scan the current HEAD lockfile for known CVEs (no diff)
     required: false
@@ -63,6 +87,12 @@ inputs:
 outputs:
   report-path:
     description: Path to the generated index.html report (empty when skipped)
+  report-url:
+    description: Public URL to this report when pages-base-url or report-url is configured
+  report-commit:
+    description: Commit SHA associated with this report
+  report-run-id:
+    description: Workflow run ID associated with this report
   changed-count:
     description: Number of packages with version changes
   red-count:

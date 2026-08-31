@@ -4,6 +4,9 @@ import { join } from "node:path";
 
 import * as github from "@actions/github";
 
+import { isGitAncestor, readReportManifest } from "./manifest.js";
+import { resolveManifestBaseRef } from "../report-manifest.js";
+
 export interface ResolveLockfilesOptions {
   lockfilePath: string;
   oldLockfilePath?: string;
@@ -12,6 +15,8 @@ export interface ResolveLockfilesOptions {
   headRef?: string;
   workspace: string;
   tempDir: string;
+  reportManifestPath?: string;
+  useReportManifestBase?: boolean;
 }
 
 export interface ResolvedLockfiles {
@@ -68,6 +73,32 @@ export function resolveHeadRefFromContext(context: GitEventContext, override?: s
   return context.sha;
 }
 
+export function resolveBaseRefWithManifest(
+  context: GitEventContext,
+  headRef: string,
+  workspace: string,
+  override?: string,
+  reportManifestPath?: string,
+  useReportManifestBase?: boolean,
+): string | null {
+  if (override?.trim()) {
+    return override.trim();
+  }
+
+  if (useReportManifestBase && reportManifestPath) {
+    const manifest = readReportManifest(reportManifestPath);
+    const manifestBase = resolveManifestBaseRef(manifest, headRef, (ancestor, descendant) =>
+      isGitAncestor(ancestor, descendant, workspace),
+    );
+
+    if (manifestBase) {
+      return manifestBase;
+    }
+  }
+
+  return resolveBaseRefFromContext(context);
+}
+
 export function gitShow(
   ref: string,
   filePath: string,
@@ -115,8 +146,15 @@ export function resolveLockfiles(options: ResolveLockfilesOptions): ResolvedLock
   }
 
   const context = github.context as GitEventContext;
-  const baseRef = resolveBaseRefFromContext(context, options.baseRef);
   const headRef = resolveHeadRefFromContext(context, options.headRef);
+  const baseRef = resolveBaseRefWithManifest(
+    context,
+    headRef,
+    workspace,
+    options.baseRef,
+    options.reportManifestPath,
+    options.useReportManifestBase,
+  );
 
   if (!baseRef) {
     throw new Error(
@@ -173,6 +211,10 @@ export function shouldSkipUnchangedLockfile(
   workspace: string,
 ): boolean {
   if (!skipIfUnchanged || resolved.source !== "git" || !resolved.baseRef || !resolved.headRef) {
+    return false;
+  }
+
+  if (resolved.baseRef === resolved.headRef) {
     return false;
   }
 

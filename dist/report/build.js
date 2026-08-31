@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Report, reportStyles } from "./components/Report.js";
-export function buildReportHtml(result) {
-    const body = renderToStaticMarkup(_jsx(Report, { result: result }));
+export function buildReportHtml(result, options = {}) {
+    const body = renderToStaticMarkup(_jsx(Report, { result: result, indexHref: options.indexHref ?? "../../" }));
     return `<!DOCTYPE html>
 <html lang="en">
   <head>

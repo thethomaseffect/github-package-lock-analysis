@@ -15,6 +15,12 @@ export interface RunActionOptions {
     reportUrl?: string;
     workspace: string;
     eventName?: string;
+    reportManifestPath?: string;
+    useReportManifestBase?: boolean;
+    pagesBaseUrl?: string;
+    reportCommit?: string;
+    reportRunId?: string;
+    reportCommitTitle?: string;
 }
 export declare function runAction(options: RunActionOptions): Promise<string | null>;
 //# sourceMappingURL=index.d.ts.map

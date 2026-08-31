@@ -1,8 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { ExistingVulnerabilityRow } from "./ExistingVulnerabilityRow.js";
 import { PackageRow } from "./PackageRow.js";
-export function Report({ result }) {
-    return (_jsxs("main", { children: [_jsxs("header", { children: [_jsx("h1", { children: "Nested dependency lockfile report" }), _jsxs("p", { className: "muted", children: ["Project: ", result.projectName] }), _jsxs("div", { className: "summary", children: [_jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.changedCount }), " changed"] }), _jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.redCount }), " CVE in changes"] }), _jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.yellowCount }), " review"] }), result.auditedExisting ? (_jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.existingRedCount }), " existing CVE"] })) : null] })] }), _jsxs("section", { children: [_jsx("h2", { className: "section-title", children: "Updated packages" }), result.changes.length === 0 ? (_jsx("p", { className: "empty", children: "No package version changes detected in package-lock.json." })) : (result.changes.map((change) => (_jsx(PackageRow, { change: change }, change.lockPath))))] }), result.auditedExisting ? (_jsxs("section", { children: [_jsx("h2", { className: "section-title", children: "Existing vulnerabilities" }), _jsx("p", { className: "section-note", children: "Manual audit of the current HEAD lockfile. These packages were not compared against a diff \u2014 this section lists installed packages that match known CVEs." }), result.existingVulnerabilities.length === 0 ? (_jsx("p", { className: "empty", children: "No additional known CVEs found in the current lockfile." })) : (result.existingVulnerabilities.map((entry) => (_jsx(ExistingVulnerabilityRow, { entry: entry }, entry.lockPath))))] })) : null] }));
+export function Report({ result, indexHref = "../../" }) {
+    return (_jsxs("main", { children: [_jsx("nav", { className: "back-nav", children: _jsx("a", { href: indexHref, children: "\u2190 All reports" }) }), _jsxs("header", { children: [_jsx("h1", { children: "Nested dependency lockfile report" }), _jsxs("p", { className: "muted", children: ["Project: ", result.projectName] }), _jsxs("div", { className: "summary", children: [_jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.changedCount }), " changed"] }), _jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.redCount }), " CVE in changes"] }), _jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.yellowCount }), " review"] }), result.auditedExisting ? (_jsxs("div", { className: "summary-card", children: [_jsx("strong", { children: result.existingRedCount }), " existing CVE"] })) : null] })] }), _jsxs("section", { children: [_jsx("h2", { className: "section-title", children: "Updated packages" }), result.changes.length === 0 ? (_jsx("p", { className: "empty", children: "No package version changes detected in package-lock.json." })) : (result.changes.map((change) => (_jsx(PackageRow, { change: change }, change.lockPath))))] }), result.auditedExisting ? (_jsxs("section", { children: [_jsx("h2", { className: "section-title", children: "Existing vulnerabilities" }), _jsx("p", { className: "section-note", children: "Manual audit of the current HEAD lockfile. These packages were not compared against a diff \u2014 this section lists installed packages that match known CVEs." }), result.existingVulnerabilities.length === 0 ? (_jsx("p", { className: "empty", children: "No additional known CVEs found in the current lockfile." })) : (result.existingVulnerabilities.map((entry) => (_jsx(ExistingVulnerabilityRow, { entry: entry }, entry.lockPath))))] })) : null] }));
 }
 export const reportStyles = `
   :root {
@@ -19,6 +19,16 @@ export const reportStyles = `
     max-width: 960px;
     margin: 0 auto;
     padding: 2rem 1.25rem 3rem;
+  }
+  .back-nav {
+    margin-bottom: 1rem;
+  }
+  .back-nav a {
+    font-size: 0.95rem;
+    text-decoration: none;
+  }
+  .back-nav a:hover {
+    text-decoration: underline;
   }
   header {
     margin-bottom: 2rem;

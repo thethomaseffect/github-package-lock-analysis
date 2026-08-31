@@ -6,6 +6,8 @@ export interface ResolveLockfilesOptions {
     headRef?: string;
     workspace: string;
     tempDir: string;
+    reportManifestPath?: string;
+    useReportManifestBase?: boolean;
 }
 export interface ResolvedLockfiles {
     oldPath: string;
@@ -22,6 +24,7 @@ export interface GitEventContext {
 }
 export declare function resolveBaseRefFromContext(context: GitEventContext, override?: string): string | null;
 export declare function resolveHeadRefFromContext(context: GitEventContext, override?: string): string;
+export declare function resolveBaseRefWithManifest(context: GitEventContext, headRef: string, workspace: string, override?: string, reportManifestPath?: string, useReportManifestBase?: boolean): string | null;
 export declare function gitShow(ref: string, filePath: string, workspace: string): string | null;
 export declare function lockfileChangedInGit(baseRef: string, headRef: string, lockfilePath: string, workspace: string): boolean;
 export declare function resolveLockfiles(options: ResolveLockfilesOptions): ResolvedLockfiles;

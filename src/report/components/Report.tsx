@@ -4,11 +4,15 @@ import { PackageRow } from "./PackageRow.js";
 
 interface ReportProps {
   result: AnalysisResult;
+  indexHref?: string;
 }
 
-export function Report({ result }: ReportProps) {
+export function Report({ result, indexHref = "../../" }: ReportProps) {
   return (
     <main>
+      <nav className="back-nav">
+        <a href={indexHref}>← All reports</a>
+      </nav>
       <header>
         <h1>Nested dependency lockfile report</h1>
         <p className="muted">Project: {result.projectName}</p>
@@ -76,6 +80,16 @@ export const reportStyles = `
     max-width: 960px;
     margin: 0 auto;
     padding: 2rem 1.25rem 3rem;
+  }
+  .back-nav {
+    margin-bottom: 1rem;
+  }
+  .back-nav a {
+    font-size: 0.95rem;
+    text-decoration: none;
+  }
+  .back-nav a:hover {
+    text-decoration: underline;
   }
   header {
     margin-bottom: 2rem;

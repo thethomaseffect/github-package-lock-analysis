@@ -151,19 +151,25 @@ jobs:
 | `post-pr-comment` | `true` | Post/update PR summary comment |
 | `skip-if-unchanged` | `true` | Skip when git diff is empty |
 | `artifact-name` | `lockfile-report` | Name referenced in PR comments |
+| `pages-base-url` | *(empty)* | GitHub Pages base URL; enables `report-url` output |
+| `report-manifest-path` | *(empty)* | Path to `reports/manifest.json` from gh-pages checkout |
+| `use-report-manifest-base` | `false` | Diff against last published report commit instead of push `before` / PR base |
+| `report-commit` | *(auto)* | Commit SHA used in report URL paths |
 
 ### Outputs
 
-`report-path`, `changed-count`, `red-count`, `yellow-count`
+`report-path`, `report-url`, `report-commit`, `changed-count`, `red-count`, `yellow-count`, `existing-red-count`
 
 ## GitHub Pages
 
-This repository's Pages site shows the **fixture demo report** (`sample-project` with lodash CVE + nested negotiator changes):
+Reports are published under **`/reports/<commit-sha>/`** and retained across runs. Re-running the workflow for the same commit overwrites that report only.
 
-**https://thethomaseffect.github.io/github-package-lock-analysis/**
+The site root lists all published reports. The fixture demo is published the same way via [publish-pages.yml](.github/workflows/publish-pages.yml). Real lockfile analysis on PR/push is published by [lockfile-analysis.yml](.github/workflows/lockfile-analysis.yml).
+
+**Diff baseline:** when `use-report-manifest-base` is enabled, the action compares the current lockfile against the **last published report commit** (not every intermediate commit since). If ten commits landed between reports, only the cumulative diff from the previous report to HEAD is analyzed.
 
 1. Enable **GitHub Pages** in repository settings with source **GitHub Actions**
-2. The [publish-pages workflow](.github/workflows/publish-pages.yml) deploys the demo; [lockfile-analysis](.github/workflows/lockfile-analysis.yml) handles real PR analysis as workflow artifacts
+2. Example report URL: `https://thethomaseffect.github.io/github-package-lock-analysis/reports/<sha>/`
 
 ## Release
 

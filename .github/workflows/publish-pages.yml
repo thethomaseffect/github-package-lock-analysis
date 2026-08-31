@@ -1,7 +1,7 @@
 name: Publish Pages Demo
 
-# This repo's GitHub Pages site always shows the fixture demo (lodash CVE + nested negotiator).
-# Real lockfile analysis on PRs uploads artifacts via lockfile-analysis.yml instead.
+# Publishes the fixture demo under reports/<run-id>/ and updates the site index.
+# Real lockfile analysis on PRs/push also publishes via lockfile-analysis.yml.
 
 on:
   workflow_dispatch:
@@ -31,7 +31,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout existing GitHub Pages site
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-site
+        continue-on-error: true
+
+      - name: Initialize pages site directory
+        run: mkdir -p gh-pages-site/reports
+
+      - name: Resolve commit title
+        id: commit-meta
+        run: |
+          {
+            echo "title<<EOF"
+            git log -1 --format=%s
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build fixture report
+        id: demo
         uses: ./
         with:
           old-lockfile-path: fixtures/sample-project/before/package-lock.json
@@ -40,10 +60,22 @@ jobs:
           project-name: sample-project
           post-pr-comment: false
           skip-if-unchanged: false
+          pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          report-commit: ${{ github.sha }}
+          report-commit-title: ${{ steps.commit-meta.outputs.title }}
+
+      - name: Merge report into GitHub Pages site
+        run: |
+          npx tsx scripts/prepare-pages-site.ts \
+            --site-dir gh-pages-site \
+            --report-file report-output/index.html \
+            --meta-file report-output/report-meta.json \
+            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
+            --repository-url "https://github.com/${{ github.repository }}"
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: report-output
+          path: gh-pages-site
 
       - id: deployment
         uses: actions/deploy-pages@v4

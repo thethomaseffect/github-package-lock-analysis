@@ -97,6 +97,8 @@ describe("buildReportHtml", () => {
 
     const html = buildReportHtml(result);
 
+    expect(html).toContain('href="../../"');
+    expect(html).toContain("All reports");
     expect(html).toContain("sample-project &gt; cheerio &gt; lodash");
     expect(html).toContain("Known CVE");
     expect(html).toContain("CVE-2020-8203");

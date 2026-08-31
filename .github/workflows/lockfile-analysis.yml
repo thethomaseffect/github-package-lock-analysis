@@ -24,14 +24,48 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: lockfile-pages
+  cancel-in-progress: false
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout existing GitHub Pages site
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-site
+        continue-on-error: true
+
+      - name: Initialize pages site directory
+        run: mkdir -p gh-pages-site/reports
+
+      - name: Resolve report commit
+        id: report-commit
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            SHA="${{ github.sha }}"
+          fi
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          {
+            echo "title<<EOF"
+            git log -1 --format=%s "${SHA}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Analyze root lockfile (git diff)
         if: ${{ !inputs.use-fixtures }}
@@ -44,6 +78,11 @@ jobs:
           skip-if-unchanged: ${{ github.event_name != 'workflow_dispatch' }}
           audit-existing: ${{ github.event_name == 'workflow_dispatch' && !inputs.use-fixtures && inputs.audit-existing }}
           fail-on-red: true
+          report-manifest-path: gh-pages-site/reports/manifest.json
+          use-report-manifest-base: true
+          pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          report-commit: ${{ steps.report-commit.outputs.sha }}
+          report-commit-title: ${{ steps.report-commit.outputs.title }}
 
       - name: Analyze fixture lockfiles (demo)
         if: ${{ inputs.use-fixtures }}
@@ -58,6 +97,9 @@ jobs:
           skip-if-unchanged: false
           audit-existing: false
           fail-on-red: true
+          pages-base-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          report-commit: ${{ steps.report-commit.outputs.sha }}
+          report-commit-title: ${{ steps.report-commit.outputs.title }}
 
       - name: Resolve report output
         id: resolved
@@ -65,8 +107,10 @@ jobs:
         run: |
           if [ "${{ inputs.use-fixtures }}" = "true" ]; then
             echo "report-path=${{ steps.analysis-fixtures.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+            echo "report-url=${{ steps.analysis-fixtures.outputs.report-url }}" >> "$GITHUB_OUTPUT"
           else
             echo "report-path=${{ steps.analysis.outputs.report-path }}" >> "$GITHUB_OUTPUT"
+            echo "report-url=${{ steps.analysis.outputs.report-url }}" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/upload-artifact@v4
@@ -74,3 +118,22 @@ jobs:
         with:
           name: lockfile-report
           path: report-output/index.html
+
+      - name: Merge report into GitHub Pages site
+        if: steps.resolved.outputs.report-path != ''
+        run: |
+          npx tsx scripts/prepare-pages-site.ts \
+            --site-dir gh-pages-site \
+            --report-file report-output/index.html \
+            --meta-file report-output/report-meta.json \
+            --pages-base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
+            --repository-url "https://github.com/${{ github.repository }}"
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.resolved.outputs.report-path != ''
+        with:
+          path: gh-pages-site
+
+      - id: deployment
+        if: steps.resolved.outputs.report-path != ''
+        uses: actions/deploy-pages@v4

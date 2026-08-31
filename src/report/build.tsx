@@ -3,8 +3,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { AnalysisResult } from "../lockfile/types.js";
 import { Report, reportStyles } from "./components/Report.js";
 
-export function buildReportHtml(result: AnalysisResult): string {
-  const body = renderToStaticMarkup(<Report result={result} />);
+export interface BuildReportHtmlOptions {
+  indexHref?: string;
+}
+
+export function buildReportHtml(
+  result: AnalysisResult,
+  options: BuildReportHtmlOptions = {},
+): string {
+  const body = renderToStaticMarkup(
+    <Report result={result} indexHref={options.indexHref ?? "../../"} />,
+  );
 
   return `<!DOCTYPE html>
 <html lang="en">

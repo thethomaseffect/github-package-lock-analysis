@@ -18,6 +18,8 @@ import {
   resolveAuditExisting,
 } from "./run-mode.js";
 import { writeReport } from "./report/write.js";
+import { buildReportPageUrl } from "./report-manifest.js";
+import { writeReportMeta } from "./report-meta.js";
 import type { AnalysisResult } from "./lockfile/types.js";
 
 export interface RunActionOptions {
@@ -37,6 +39,37 @@ export interface RunActionOptions {
   reportUrl?: string;
   workspace: string;
   eventName?: string;
+  reportManifestPath?: string;
+  useReportManifestBase?: boolean;
+  pagesBaseUrl?: string;
+  reportCommit?: string;
+  reportRunId?: string;
+  reportCommitTitle?: string;
+}
+
+function resolveReportCommit(options: RunActionOptions): string {
+  return (
+    options.reportCommit ??
+    options.headRef ??
+    process.env.GITHUB_SHA ??
+    "unknown"
+  );
+}
+
+function resolveReportRunId(options: RunActionOptions): string {
+  return options.reportRunId ?? process.env.GITHUB_RUN_ID ?? "local";
+}
+
+function resolveReportUrl(options: RunActionOptions, runId: string): string | undefined {
+  if (options.reportUrl) {
+    return options.reportUrl;
+  }
+
+  if (options.pagesBaseUrl) {
+    return buildReportPageUrl(options.pagesBaseUrl, runId);
+  }
+
+  return undefined;
 }
 
 function buildWorkflowRunUrl(): string | undefined {
@@ -55,11 +88,27 @@ async function publishResult(
   result: AnalysisResult,
   options: RunActionOptions,
   reportPath: string,
+  reportCommit: string,
+  reportRunId: string,
 ): Promise<void> {
   const workflowRunUrl = buildWorkflowRunUrl();
   const totalRedCount = result.redCount + result.existingRedCount;
+  const reportUrl = resolveReportUrl(options, reportRunId);
+
+  writeReportMeta(options.outputDir, {
+    runId: reportRunId,
+    commit: reportCommit,
+    commitTitle: options.reportCommitTitle ?? "",
+    changedCount: result.changedCount,
+    issueCount: totalRedCount,
+    generatedAt: new Date().toISOString(),
+    workflowRunUrl,
+  });
 
   core.setOutput("report-path", reportPath);
+  core.setOutput("report-commit", reportCommit);
+  core.setOutput("report-run-id", reportRunId);
+  core.setOutput("report-url", reportUrl ?? "");
   core.setOutput("changed-count", String(result.changedCount));
   core.setOutput("red-count", String(result.redCount));
   core.setOutput("yellow-count", String(result.yellowCount));
@@ -87,7 +136,11 @@ async function publishResult(
   }
 
   summary.addHeading("Report", 3).addRaw(
-    buildWorkflowArtifactLink(options.artifactName, workflowRunUrl, options.reportUrl),
+    buildWorkflowArtifactLink(
+      options.artifactName,
+      workflowRunUrl,
+      reportUrl ?? options.reportUrl,
+    ),
   );
 
   await summary.write();
@@ -96,7 +149,7 @@ async function publishResult(
     await postPullRequestComment(
       result,
       options.artifactName,
-      options.reportUrl ?? workflowRunUrl,
+      reportUrl ?? options.reportUrl ?? workflowRunUrl,
     );
   }
 
@@ -124,6 +177,8 @@ async function publishResult(
 async function runManualAuditOnly(options: RunActionOptions): Promise<string> {
   const lockfilePath =
     options.newLockfilePath ?? join(options.workspace, options.lockfilePath);
+  const reportCommit = resolveReportCommit(options);
+  const reportRunId = resolveReportRunId(options);
 
   core.info(`Manual audit: scanning installed packages in ${lockfilePath}.`);
 
@@ -136,7 +191,7 @@ async function runManualAuditOnly(options: RunActionOptions): Promise<string> {
   });
 
   const reportPath = writeReport(result, options.outputDir);
-  await publishResult(result, options, reportPath);
+  await publishResult(result, options, reportPath, reportCommit, reportRunId);
   return reportPath;
 }
 
@@ -150,9 +205,23 @@ async function runDiffAnalysis(options: RunActionOptions): Promise<string | null
     headRef: options.headRef,
     workspace: options.workspace,
     tempDir,
+    reportManifestPath: options.reportManifestPath,
+    useReportManifestBase: options.useReportManifestBase,
   });
+  const reportCommit = resolveReportCommit(options);
+  const reportRunId = resolveReportRunId(options);
 
   try {
+    if (resolved.baseRef && resolved.headRef && resolved.baseRef !== resolved.headRef) {
+      core.info(
+        `Comparing ${options.lockfilePath} at ${resolved.headRef} against ${resolved.baseRef}.`,
+      );
+    } else if (resolved.baseRef && resolved.headRef) {
+      core.info(
+        `Re-publishing report for ${options.lockfilePath} at ${resolved.headRef}.`,
+      );
+    }
+
     if (
       shouldSkipUnchangedLockfile(
         options.skipIfUnchanged,
@@ -166,6 +235,9 @@ async function runDiffAnalysis(options: RunActionOptions): Promise<string | null
       core.setOutput("red-count", "0");
       core.setOutput("yellow-count", "0");
       core.setOutput("existing-red-count", "0");
+      core.setOutput("report-commit", reportCommit);
+      core.setOutput("report-run-id", reportRunId);
+      core.setOutput("report-url", resolveReportUrl(options, reportRunId) ?? "");
       return null;
     }
 
@@ -179,7 +251,7 @@ async function runDiffAnalysis(options: RunActionOptions): Promise<string | null
     });
 
     const reportPath = writeReport(result, options.outputDir);
-    await publishResult(result, options, reportPath);
+    await publishResult(result, options, reportPath, reportCommit, reportRunId);
     return reportPath;
   } finally {
     resolved.cleanup();
@@ -224,6 +296,12 @@ async function main(): Promise<void> {
     const postPrComment = core.getBooleanInput("post-pr-comment");
     const artifactName = core.getInput("artifact-name") || "lockfile-report";
     const reportUrl = core.getInput("report-url") || undefined;
+    const reportManifestPath = core.getInput("report-manifest-path") || undefined;
+    const useReportManifestBase = core.getBooleanInput("use-report-manifest-base");
+    const pagesBaseUrl = core.getInput("pages-base-url") || undefined;
+    const reportCommit = core.getInput("report-commit") || undefined;
+    const reportRunId = core.getInput("report-run-id") || undefined;
+    const reportCommitTitle = core.getInput("report-commit-title") || undefined;
     const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
     await runAction({
@@ -242,6 +320,13 @@ async function main(): Promise<void> {
       artifactName,
       reportUrl,
       workspace,
+      eventName: process.env.GITHUB_EVENT_NAME,
+      reportManifestPath,
+      useReportManifestBase,
+      pagesBaseUrl,
+      reportCommit,
+      reportRunId,
+      reportCommitTitle,
     });
   } catch (error) {
     if (error instanceof Error) {

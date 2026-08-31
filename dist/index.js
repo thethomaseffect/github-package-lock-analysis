@@ -7,6 +7,26 @@ import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactLink, } 
 import { readLockfileFromPath } from "./lockfile/diff.js";
 import { hasExplicitLockfilePaths, resolveAuditExisting, } from "./run-mode.js";
 import { writeReport } from "./report/write.js";
+import { buildReportPageUrl } from "./report-manifest.js";
+import { writeReportMeta } from "./report-meta.js";
+function resolveReportCommit(options) {
+    return (options.reportCommit ??
+        options.headRef ??
+        process.env.GITHUB_SHA ??
+        "unknown");
+}
+function resolveReportRunId(options) {
+    return options.reportRunId ?? process.env.GITHUB_RUN_ID ?? "local";
+}
+function resolveReportUrl(options, runId) {
+    if (options.reportUrl) {
+        return options.reportUrl;
+    }
+    if (options.pagesBaseUrl) {
+        return buildReportPageUrl(options.pagesBaseUrl, runId);
+    }
+    return undefined;
+}
 function buildWorkflowRunUrl() {
     const server = process.env.GITHUB_SERVER_URL;
     const repo = process.env.GITHUB_REPOSITORY;
@@ -16,10 +36,23 @@ function buildWorkflowRunUrl() {
     }
     return `${server}/${repo}/actions/runs/${runId}`;
 }
-async function publishResult(result, options, reportPath) {
+async function publishResult(result, options, reportPath, reportCommit, reportRunId) {
     const workflowRunUrl = buildWorkflowRunUrl();
     const totalRedCount = result.redCount + result.existingRedCount;
+    const reportUrl = resolveReportUrl(options, reportRunId);
+    writeReportMeta(options.outputDir, {
+        runId: reportRunId,
+        commit: reportCommit,
+        commitTitle: options.reportCommitTitle ?? "",
+        changedCount: result.changedCount,
+        issueCount: totalRedCount,
+        generatedAt: new Date().toISOString(),
+        workflowRunUrl,
+    });
     core.setOutput("report-path", reportPath);
+    core.setOutput("report-commit", reportCommit);
+    core.setOutput("report-run-id", reportRunId);
+    core.setOutput("report-url", reportUrl ?? "");
     core.setOutput("changed-count", String(result.changedCount));
     core.setOutput("red-count", String(result.redCount));
     core.setOutput("yellow-count", String(result.yellowCount));
@@ -40,10 +73,10 @@ async function publishResult(result, options, reportPath) {
             ? `${result.existingRedCount} installed package(s) in the current lockfile match known CVEs. See the report artifact.`
             : "No known CVEs found in the current lockfile.");
     }
-    summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactLink(options.artifactName, workflowRunUrl, options.reportUrl));
+    summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactLink(options.artifactName, workflowRunUrl, reportUrl ?? options.reportUrl));
     await summary.write();
     if (options.postPrComment) {
-        await postPullRequestComment(result, options.artifactName, options.reportUrl ?? workflowRunUrl);
+        await postPullRequestComment(result, options.artifactName, reportUrl ?? options.reportUrl ?? workflowRunUrl);
     }
     if (totalRedCount > 0) {
         core.error(`Found ${totalRedCount} package(s) with known CVEs (${result.redCount} in changes, ${result.existingRedCount} existing). Download the **${options.artifactName}** artifact from this workflow run for details.`);
@@ -63,6 +96,8 @@ async function publishResult(result, options, reportPath) {
 }
 async function runManualAuditOnly(options) {
     const lockfilePath = options.newLockfilePath ?? join(options.workspace, options.lockfilePath);
+    const reportCommit = resolveReportCommit(options);
+    const reportRunId = resolveReportRunId(options);
     core.info(`Manual audit: scanning installed packages in ${lockfilePath}.`);
     const lockfile = readLockfileFromPath(lockfilePath);
     const result = await analyzeLockfileChanges(lockfile, lockfile, {
@@ -72,7 +107,7 @@ async function runManualAuditOnly(options) {
         excludeLockPaths: new Set(),
     });
     const reportPath = writeReport(result, options.outputDir);
-    await publishResult(result, options, reportPath);
+    await publishResult(result, options, reportPath, reportCommit, reportRunId);
     return reportPath;
 }
 async function runDiffAnalysis(options) {
@@ -85,14 +120,27 @@ async function runDiffAnalysis(options) {
         headRef: options.headRef,
         workspace: options.workspace,
         tempDir,
+        reportManifestPath: options.reportManifestPath,
+        useReportManifestBase: options.useReportManifestBase,
     });
+    const reportCommit = resolveReportCommit(options);
+    const reportRunId = resolveReportRunId(options);
     try {
+        if (resolved.baseRef && resolved.headRef && resolved.baseRef !== resolved.headRef) {
+            core.info(`Comparing ${options.lockfilePath} at ${resolved.headRef} against ${resolved.baseRef}.`);
+        }
+        else if (resolved.baseRef && resolved.headRef) {
+            core.info(`Re-publishing report for ${options.lockfilePath} at ${resolved.headRef}.`);
+        }
         if (shouldSkipUnchangedLockfile(options.skipIfUnchanged, resolved, options.lockfilePath, options.workspace)) {
             core.info(`No changes detected in ${options.lockfilePath}; skipping analysis.`);
             core.setOutput("changed-count", "0");
             core.setOutput("red-count", "0");
             core.setOutput("yellow-count", "0");
             core.setOutput("existing-red-count", "0");
+            core.setOutput("report-commit", reportCommit);
+            core.setOutput("report-run-id", reportRunId);
+            core.setOutput("report-url", resolveReportUrl(options, reportRunId) ?? "");
             return null;
         }
         const oldLockfile = readLockfileFromPath(resolved.oldPath);
@@ -103,7 +151,7 @@ async function runDiffAnalysis(options) {
             auditExisting: false,
         });
         const reportPath = writeReport(result, options.outputDir);
-        await publishResult(result, options, reportPath);
+        await publishResult(result, options, reportPath, reportCommit, reportRunId);
         return reportPath;
     }
     finally {
@@ -137,6 +185,12 @@ async function main() {
         const postPrComment = core.getBooleanInput("post-pr-comment");
         const artifactName = core.getInput("artifact-name") || "lockfile-report";
         const reportUrl = core.getInput("report-url") || undefined;
+        const reportManifestPath = core.getInput("report-manifest-path") || undefined;
+        const useReportManifestBase = core.getBooleanInput("use-report-manifest-base");
+        const pagesBaseUrl = core.getInput("pages-base-url") || undefined;
+        const reportCommit = core.getInput("report-commit") || undefined;
+        const reportRunId = core.getInput("report-run-id") || undefined;
+        const reportCommitTitle = core.getInput("report-commit-title") || undefined;
         const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
         await runAction({
             lockfilePath,
@@ -154,6 +208,13 @@ async function main() {
             artifactName,
             reportUrl,
             workspace,
+            eventName: process.env.GITHUB_EVENT_NAME,
+            reportManifestPath,
+            useReportManifestBase,
+            pagesBaseUrl,
+            reportCommit,
+            reportRunId,
+            reportCommitTitle,
         });
     }
     catch (error) {
