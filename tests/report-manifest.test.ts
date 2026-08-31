@@ -75,10 +75,12 @@ describe("report manifest", () => {
 
   it("renders a contents table with commit, run, and counts", () => {
     const html = buildContentsIndexHtml({
-      latestReportCommit: "abc123",
+      latestReportCommit: "abc123def456",
       reports: [
         sampleEntry({
           runId: "999",
+          commit: "abc123def456",
+          baseCommit: "aaa111bbb222",
           commitTitle: "Fix lodash",
           changedCount: 3,
           issueCount: 1,
@@ -93,10 +95,20 @@ describe("report manifest", () => {
     expect(html).toContain("1");
     expect(html).toContain("./reports/999/");
     expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noopener noreferrer"');
-    expect(html).toContain('class="external-link"');
-    expect(html).toContain('class="external-icon"');
-    expect(html).toContain("https://github.com/org/repo/commit/abc123");
+    expect(html).toContain('class="commit-range"');
+    expect(html).toContain('class="commit-arrow"');
+    expect(html).toContain("https://github.com/org/repo/commit/aaa111bbb222");
+    expect(html).toContain("https://github.com/org/repo/commit/abc123def456");
     expect(html).toContain("https://github.com/org/repo/actions/runs/999");
+  });
+
+  it("shows a single commit link when no base commit is recorded", () => {
+    const html = buildContentsIndexHtml({
+      latestReportCommit: "abc123",
+      reports: [sampleEntry({ commit: "abc123def456" })],
+    }, "https://github.com/org/repo");
+
+    expect(html).not.toContain('class="commit-range"');
+    expect(html).toContain("https://github.com/org/repo/commit/abc123def456");
   });
 });

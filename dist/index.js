@@ -36,13 +36,15 @@ function buildWorkflowRunUrl() {
     }
     return `${server}/${repo}/actions/runs/${runId}`;
 }
-async function publishResult(result, options, reportPath, reportCommit, reportRunId) {
+async function publishResult(result, options, reportPath, reportCommit, reportRunId, baseCommit) {
     const workflowRunUrl = buildWorkflowRunUrl();
     const totalRedCount = result.redCount + result.existingRedCount;
     const reportUrl = resolveReportUrl(options, reportRunId);
+    const resolvedBaseCommit = options.reportBaseCommit ?? baseCommit;
     writeReportMeta(options.outputDir, {
         runId: reportRunId,
         commit: reportCommit,
+        baseCommit: resolvedBaseCommit,
         commitTitle: options.reportCommitTitle ?? "",
         changedCount: result.changedCount,
         issueCount: totalRedCount,
@@ -151,7 +153,8 @@ async function runDiffAnalysis(options) {
             auditExisting: false,
         });
         const reportPath = writeReport(result, options.outputDir);
-        await publishResult(result, options, reportPath, reportCommit, reportRunId);
+        const baseCommit = resolved.source === "git" ? resolved.baseRef : undefined;
+        await publishResult(result, options, reportPath, reportCommit, reportRunId, baseCommit);
         return reportPath;
     }
     finally {
@@ -191,6 +194,7 @@ async function main() {
         const reportCommit = core.getInput("report-commit") || undefined;
         const reportRunId = core.getInput("report-run-id") || undefined;
         const reportCommitTitle = core.getInput("report-commit-title") || undefined;
+        const reportBaseCommit = core.getInput("report-base-commit") || undefined;
         const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
         await runAction({
             lockfilePath,
@@ -215,6 +219,7 @@ async function main() {
             reportCommit,
             reportRunId,
             reportCommitTitle,
+            reportBaseCommit,
         });
     }
     catch (error) {

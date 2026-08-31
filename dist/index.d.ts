@@ -21,6 +21,7 @@ export interface RunActionOptions {
     reportCommit?: string;
     reportRunId?: string;
     reportCommitTitle?: string;
+    reportBaseCommit?: string;
 }
 export declare function runAction(options: RunActionOptions): Promise<string | null>;
 //# sourceMappingURL=index.d.ts.map

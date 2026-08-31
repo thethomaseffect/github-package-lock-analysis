@@ -66,6 +66,7 @@ export function preparePagesSite(options: PreparePagesSiteOptions): {
   const manifest = upsertReportEntry(loadManifest(options.siteDir), {
     runId: meta.runId,
     commit: meta.commit,
+    baseCommit: meta.baseCommit,
     commitTitle: meta.commitTitle,
     changedCount: meta.changedCount,
     issueCount: meta.issueCount,

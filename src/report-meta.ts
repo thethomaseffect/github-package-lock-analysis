@@ -4,6 +4,7 @@ import { join } from "node:path";
 export interface ReportMeta {
   runId: string;
   commit: string;
+  baseCommit?: string;
   commitTitle: string;
   changedCount: number;
   issueCount: number;
@@ -22,6 +23,7 @@ export function parseReportMeta(raw: string): ReportMeta {
   return {
     runId: parsed.runId ?? "",
     commit: parsed.commit ?? "",
+    baseCommit: parsed.baseCommit,
     commitTitle: parsed.commitTitle ?? "",
     changedCount: parsed.changedCount ?? 0,
     issueCount: parsed.issueCount ?? 0,

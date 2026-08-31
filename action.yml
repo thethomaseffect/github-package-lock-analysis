@@ -67,6 +67,10 @@ inputs:
     description: Commit SHA analyzed for this report (defaults to head-ref or GITHUB_SHA)
     required: false
     default: ""
+  report-base-commit:
+    description: Base commit SHA diffed against (auto-resolved from git when omitted)
+    required: false
+    default: ""
   report-run-id:
     description: Workflow run ID used in report-url paths (defaults to GITHUB_RUN_ID)
     required: false

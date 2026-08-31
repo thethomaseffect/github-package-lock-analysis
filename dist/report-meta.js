@@ -10,6 +10,7 @@ export function parseReportMeta(raw) {
     return {
         runId: parsed.runId ?? "",
         commit: parsed.commit ?? "",
+        baseCommit: parsed.baseCommit,
         commitTitle: parsed.commitTitle ?? "",
         changedCount: parsed.changedCount ?? 0,
         issueCount: parsed.issueCount ?? 0,

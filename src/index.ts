@@ -45,6 +45,7 @@ export interface RunActionOptions {
   reportCommit?: string;
   reportRunId?: string;
   reportCommitTitle?: string;
+  reportBaseCommit?: string;
 }
 
 function resolveReportCommit(options: RunActionOptions): string {
@@ -90,14 +91,17 @@ async function publishResult(
   reportPath: string,
   reportCommit: string,
   reportRunId: string,
+  baseCommit?: string,
 ): Promise<void> {
   const workflowRunUrl = buildWorkflowRunUrl();
   const totalRedCount = result.redCount + result.existingRedCount;
   const reportUrl = resolveReportUrl(options, reportRunId);
+  const resolvedBaseCommit = options.reportBaseCommit ?? baseCommit;
 
   writeReportMeta(options.outputDir, {
     runId: reportRunId,
     commit: reportCommit,
+    baseCommit: resolvedBaseCommit,
     commitTitle: options.reportCommitTitle ?? "",
     changedCount: result.changedCount,
     issueCount: totalRedCount,
@@ -251,7 +255,15 @@ async function runDiffAnalysis(options: RunActionOptions): Promise<string | null
     });
 
     const reportPath = writeReport(result, options.outputDir);
-    await publishResult(result, options, reportPath, reportCommit, reportRunId);
+    const baseCommit = resolved.source === "git" ? resolved.baseRef : undefined;
+    await publishResult(
+      result,
+      options,
+      reportPath,
+      reportCommit,
+      reportRunId,
+      baseCommit,
+    );
     return reportPath;
   } finally {
     resolved.cleanup();
@@ -302,6 +314,7 @@ async function main(): Promise<void> {
     const reportCommit = core.getInput("report-commit") || undefined;
     const reportRunId = core.getInput("report-run-id") || undefined;
     const reportCommitTitle = core.getInput("report-commit-title") || undefined;
+    const reportBaseCommit = core.getInput("report-base-commit") || undefined;
     const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
     await runAction({
@@ -327,6 +340,7 @@ async function main(): Promise<void> {
       reportCommit,
       reportRunId,
       reportCommitTitle,
+      reportBaseCommit,
     });
   } catch (error) {
     if (error instanceof Error) {

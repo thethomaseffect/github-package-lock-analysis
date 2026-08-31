@@ -1,6 +1,7 @@
 export interface ReportManifestEntry {
     runId: string;
     commit: string;
+    baseCommit?: string;
     commitTitle: string;
     changedCount: number;
     issueCount: number;

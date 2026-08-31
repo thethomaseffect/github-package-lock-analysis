@@ -11,6 +11,7 @@ export function parseReportManifest(raw) {
         reports: (parsed.reports ?? []).map((entry) => ({
             runId: entry.runId ?? entry.commit,
             commit: entry.commit ?? "",
+            baseCommit: entry.baseCommit,
             commitTitle: entry.commitTitle ?? "",
             changedCount: entry.changedCount ?? 0,
             issueCount: entry.issueCount ?? 0,
@@ -47,10 +48,7 @@ export function resolveManifestBaseRef(manifest, headRef, isAncestor) {
 export function buildContentsIndexHtml(manifest, repositoryUrl) {
     const rows = manifest.reports
         .map((entry) => {
-        const commitShort = entry.commit.slice(0, 12);
-        const commitLink = repositoryUrl && entry.commit
-            ? buildExternalLink(`${repositoryUrl}/commit/${entry.commit}`, commitShort)
-            : escapeHtml(commitShort);
+        const commitLink = buildCommitRangeLinks(repositoryUrl, entry.baseCommit, entry.commit);
         const runLink = entry.workflowRunUrl
             ? buildExternalLink(entry.workflowRunUrl, entry.runId)
             : escapeHtml(entry.runId);
@@ -88,6 +86,15 @@ export function buildContentsIndexHtml(manifest, repositoryUrl) {
         opacity: 0.8;
         flex-shrink: 0;
       }
+      .commit-range {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+      }
+      .commit-arrow {
+        color: #94a3b8;
+      }
       table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
       th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid #334155; }
       th { color: #cbd5e1; font-size: 0.9rem; }
@@ -101,7 +108,7 @@ export function buildContentsIndexHtml(manifest, repositoryUrl) {
       <thead>
         <tr>
           <th>Report</th>
-          <th>Commit</th>
+          <th>Commits</th>
           <th>Workflow run</th>
           <th>Commit title</th>
           <th>Changes</th>
@@ -115,6 +122,18 @@ export function buildContentsIndexHtml(manifest, repositoryUrl) {
     </table>
   </body>
 </html>`;
+}
+function buildCommitRangeLinks(repositoryUrl, baseCommit, commit) {
+    const headShort = commit.slice(0, 12);
+    const headLink = repositoryUrl && commit
+        ? buildExternalLink(`${repositoryUrl}/commit/${commit}`, headShort)
+        : escapeHtml(headShort);
+    if (!baseCommit || baseCommit === commit || !repositoryUrl) {
+        return headLink;
+    }
+    const baseShort = baseCommit.slice(0, 12);
+    const baseLink = buildExternalLink(`${repositoryUrl}/commit/${baseCommit}`, baseShort);
+    return `<span class="commit-range">${baseLink}<span class="commit-arrow" aria-hidden="true">→</span>${headLink}</span>`;
 }
 function buildExternalLink(href, label) {
     return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="external-link" title="Opens on GitHub in a new tab">${escapeHtml(label)}${externalLinkIcon()}</a>`;
