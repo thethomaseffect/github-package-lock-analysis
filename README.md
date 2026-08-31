@@ -158,12 +158,12 @@ jobs:
 
 ## GitHub Pages
 
-On pushes to `main` that change `package-lock.json`, the [lockfile-analysis workflow](.github/workflows/lockfile-analysis.yml) deploys the HTML report to GitHub Pages.
+This repository's Pages site shows the **fixture demo report** (`sample-project` with lodash CVE + nested negotiator changes):
+
+**https://thethomaseffect.github.io/github-package-lock-analysis/**
 
 1. Enable **GitHub Pages** in repository settings with source **GitHub Actions**
-2. Merge a change to `package-lock.json`, or run **Lockfile Analysis** manually (`workflow_dispatch`) with **use-fixtures** to publish a demo report
-
-PR builds upload the report as a workflow artifact. Merges to `main` also publish to Pages.
+2. The [publish-pages workflow](.github/workflows/publish-pages.yml) deploys the demo; [lockfile-analysis](.github/workflows/lockfile-analysis.yml) handles real PR analysis as workflow artifacts
 
 ## Release
 
