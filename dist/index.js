@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { analyzeLockfileChanges } from "./analyze.js";
 import { resolveLockfiles, shouldSkipUnchangedLockfile, } from "./git/resolve-lockfiles.js";
 import { postPullRequestComment } from "./github/comment.js";
-import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactLink, } from "./github/format.js";
+import { buildSummaryChangeList, buildSummaryRows, buildWorkflowArtifactSummaryHtml, } from "./github/format.js";
 import { readLockfileFromPath } from "./lockfile/diff.js";
 import { hasExplicitLockfilePaths, resolveAuditExisting, } from "./run-mode.js";
 import { writeReport } from "./report/write.js";
@@ -75,7 +75,7 @@ async function publishResult(result, options, reportPath, reportCommit, reportRu
             ? `${result.existingRedCount} installed package(s) in the current lockfile match known CVEs. See the report artifact.`
             : "No known CVEs found in the current lockfile.");
     }
-    summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactLink(options.artifactName, workflowRunUrl, reportUrl ?? options.reportUrl));
+    summary.addHeading("Report", 3).addRaw(buildWorkflowArtifactSummaryHtml(options.artifactName, workflowRunUrl, reportUrl ?? options.reportUrl));
     await summary.write();
     if (options.postPrComment) {
         await postPullRequestComment(result, options.artifactName, reportUrl ?? options.reportUrl ?? workflowRunUrl);

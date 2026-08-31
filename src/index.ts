@@ -10,7 +10,7 @@ import { postPullRequestComment } from "./github/comment.js";
 import {
   buildSummaryChangeList,
   buildSummaryRows,
-  buildWorkflowArtifactLink,
+  buildWorkflowArtifactSummaryHtml,
 } from "./github/format.js";
 import { readLockfileFromPath } from "./lockfile/diff.js";
 import {
@@ -140,7 +140,7 @@ async function publishResult(
   }
 
   summary.addHeading("Report", 3).addRaw(
-    buildWorkflowArtifactLink(
+    buildWorkflowArtifactSummaryHtml(
       options.artifactName,
       workflowRunUrl,
       reportUrl ?? options.reportUrl,

@@ -6,6 +6,7 @@ import {
 } from "../src/git/resolve-lockfiles.js";
 import {
   buildPullRequestComment,
+  buildWorkflowArtifactSummaryHtml,
   formatChangeLine,
 } from "../src/github/format.js";
 import type { AnalysisResult } from "../src/lockfile/types.js";
@@ -133,5 +134,18 @@ describe("buildPullRequestComment", () => {
     const withUrl = buildPullRequestComment(result, "lockfile-report", "https://example.com/report");
     expect(withUrl).toContain("[View HTML report](https://example.com/report)");
     expect(withUrl).not.toContain("workflow artifacts");
+  });
+
+  it("builds clickable HTML links for the job summary report section", () => {
+    const html = buildWorkflowArtifactSummaryHtml(
+      "lockfile-report",
+      "https://github.com/org/repo/actions/runs/123",
+      "https://example.github.io/repo/reports/123/",
+    );
+
+    expect(html).toContain('<a href="https://example.github.io/repo/reports/123/">View HTML report</a>');
+    expect(html).toContain('<a href="https://github.com/org/repo/actions/runs/123">workflow run</a>');
+    expect(html).toContain("<code>lockfile-report</code>");
+    expect(html).not.toContain("[View HTML report]");
   });
 });

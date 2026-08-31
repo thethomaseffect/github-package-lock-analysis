@@ -27,6 +27,40 @@ export function buildWorkflowArtifactLink(
   return `Download the **${artifactName}** artifact from this workflow run.`;
 }
 
+export function buildWorkflowArtifactSummaryHtml(
+  artifactName: string,
+  workflowRunUrl?: string,
+  reportUrl?: string,
+): string {
+  const artifact = escapeHtml(artifactName);
+
+  if (reportUrl && workflowRunUrl) {
+    return `<p><a href="${escapeHtmlAttr(reportUrl)}">View HTML report</a> · Download <code>${artifact}</code> artifact from the <a href="${escapeHtmlAttr(workflowRunUrl)}">workflow run</a>.</p>`;
+  }
+
+  if (reportUrl) {
+    return `<p><a href="${escapeHtmlAttr(reportUrl)}">View HTML report</a> · Download <code>${artifact}</code> artifact from this workflow run.</p>`;
+  }
+
+  if (workflowRunUrl) {
+    return `<p>Download the <code>${artifact}</code> artifact from this <a href="${escapeHtmlAttr(workflowRunUrl)}">workflow run</a>.</p>`;
+  }
+
+  return `<p>Download the <code>${artifact}</code> artifact from this workflow run.</p>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function escapeHtmlAttr(value: string): string {
+  return escapeHtml(value).replaceAll("'", "&#39;");
+}
+
 export function buildPullRequestComment(
   result: AnalysisResult,
   artifactName: string,

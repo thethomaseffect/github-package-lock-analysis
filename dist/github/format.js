@@ -15,6 +15,29 @@ export function buildWorkflowArtifactLink(artifactName, workflowRunUrl, reportUr
     }
     return `Download the **${artifactName}** artifact from this workflow run.`;
 }
+export function buildWorkflowArtifactSummaryHtml(artifactName, workflowRunUrl, reportUrl) {
+    const artifact = escapeHtml(artifactName);
+    if (reportUrl && workflowRunUrl) {
+        return `<p><a href="${escapeHtmlAttr(reportUrl)}">View HTML report</a> · Download <code>${artifact}</code> artifact from the <a href="${escapeHtmlAttr(workflowRunUrl)}">workflow run</a>.</p>`;
+    }
+    if (reportUrl) {
+        return `<p><a href="${escapeHtmlAttr(reportUrl)}">View HTML report</a> · Download <code>${artifact}</code> artifact from this workflow run.</p>`;
+    }
+    if (workflowRunUrl) {
+        return `<p>Download the <code>${artifact}</code> artifact from this <a href="${escapeHtmlAttr(workflowRunUrl)}">workflow run</a>.</p>`;
+    }
+    return `<p>Download the <code>${artifact}</code> artifact from this workflow run.</p>`;
+}
+function escapeHtml(value) {
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+}
+function escapeHtmlAttr(value) {
+    return escapeHtml(value).replaceAll("'", "&#39;");
+}
 export function buildPullRequestComment(result, artifactName, reportUrl) {
     const lines = [
         "## Package lock analysis",
