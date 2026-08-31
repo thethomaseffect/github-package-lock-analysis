@@ -9,11 +9,11 @@ The [Frontier Engineering Challenge 2026](https://www.hackerearth.com/community/
 | **Cursor** (IDE + Agent mode) | Implementation, refactors, workflows, tests, docs |
 | **Claude** (via Cursor) | Architecture, code generation, debugging |
 
-Repository context for agents: [CLAUDE.md](../CLAUDE.md).
+Repository context for agents: [CLAUDE.md](./CLAUDE.md).
 
 ## Trajectory sources (for judges)
 
-1. **[PROMPTS.md](../PROMPTS.md)** — Primary trajectory log. Summarized prompts and outcomes between commits (Aug 31, 2026).
+1. **[PROMPTS.md](./PROMPTS.md)** — Primary trajectory log. Summarized prompts and outcomes between commits (Aug 31, 2026).
 2. **Git history** — `git log --oneline main` shows incremental delivery and commit messages.
 3. **Cursor session export** — Full agent chat available from the developer’s Cursor session (request if needed for verbatim traces).
 
@@ -32,4 +32,4 @@ npm run test:baseline    # baseline fixture run, offline
 npm run test:fixtures    # integration fixture run, network required
 ```
 
-See [SUBMISSION.md](../SUBMISSION.md) for the full reproduction guide and baseline vs advanced comparison.
+See [SUBMISSION.md](./SUBMISSION.md) for the full reproduction guide and baseline vs advanced comparison.

@@ -165,11 +165,13 @@ Built for the [micro1 Frontier Engineering Challenge 2026](https://www.hackerear
 | **Baseline** | `npm run test:baseline` | Diff-only report, no CVE lookups |
 | **Advanced** | `npm run test:fixtures` | Full enrichment (red/yellow on fixture) |
 
-Full judge package: [SUBMISSION.md](./SUBMISSION.md) · agent trajectories: [docs/AGENT_TRAJECTORIES.md](./docs/AGENT_TRAJECTORIES.md) · [PROMPTS.md](./PROMPTS.md)
+Full judge package: [SUBMISSION.md](./SUBMISSION.md) · [AGENT_TRAJECTORIES.md](./AGENT_TRAJECTORIES.md) · [PROMPTS.md](./PROMPTS.md)
 
 ## Docs
 
-- [CLAUDE.md](./CLAUDE.md) — architecture for contributors
+- [CLAUDE.md](./CLAUDE.md) — architecture for contributors and AI assistants
+- [SUBMISSION.md](./SUBMISSION.md) — hackathon judge package
+- [AGENT_TRAJECTORIES.md](./AGENT_TRAJECTORIES.md) — agent use disclosure
 - [PROMPTS.md](./PROMPTS.md) — hackathon prompt log
 
 ## License

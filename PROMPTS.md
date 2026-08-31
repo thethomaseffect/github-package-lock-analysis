@@ -108,7 +108,7 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 
 **Summary:** Prepare for [Frontier Engineering Challenge 2026](https://www.hackerearth.com/community/challenges/hackathon/micro1-frontier-engineering-challenge-2026/) submission: document baseline vs advanced solution, reproduction guide for judges, agent trajectory disclosure, and a runnable baseline path (`npm run test:baseline`) that diffs fixtures without OSV calls.
 
-**Scope:** `SUBMISSION.md`, `docs/AGENT_TRAJECTORIES.md`, `scripts/run-baseline.ts`, `README.md` hackathon section, `package.json` `test:baseline`.
+**Scope:** `SUBMISSION.md`, `AGENT_TRAJECTORIES.md`, `scripts/run-baseline.ts`, `README.md` hackathon section, `package.json` `test:baseline`.
 
 **Outcome:** Judges can run baseline (yellow-only, offline) vs advanced (`test:fixtures`, red lodash) on the same fixture.
 
@@ -128,7 +128,7 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 
 **Summary:** First-person voice in SUBMISSION.md; clarify unit vs integration test network requirements; remove personal checklists/video outline from judge-facing SUBMISSION.md (kept in local notes).
 
-**Scope:** `SUBMISSION.md`, `README.md`, `docs/AGENT_TRAJECTORIES.md`, `PROMPTS.md`.
+**Scope:** `SUBMISSION.md`, `README.md`, `AGENT_TRAJECTORIES.md`, `PROMPTS.md`.
 
 **Outcome:** `6f31d45`, `4845da9`, `2938045`.
 
@@ -141,6 +141,16 @@ Keep entries concise. Link to commits when helpful (`abc1234`).
 **Scope:** `CLAUDE.md`, `SUBMISSION.md`, `README.md`, `PROMPTS.md`, `.github/workflows/ci.yml`.
 
 **Outcome:** Docs match current modules, manual-review mode, node24 action runtime, and offline baseline CI.
+
+---
+
+## 2026-08-31 — Keep documentation at repository root
+
+**Summary:** Reverted docs/ consolidation — README and CLAUDE.md stay at root alongside SUBMISSION.md, PROMPTS.md, and AGENT_TRAJECTORIES.md. Removed empty `docs/` folder.
+
+**Scope:** Root markdown files, `README.md` cross-references.
+
+**Outcome:** All project docs live in the repository root; no `docs/` directory.
 
 ---
 
