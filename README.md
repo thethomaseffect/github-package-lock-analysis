@@ -38,6 +38,7 @@ Each entry includes:
 - CVE links when matches exist
 - **Red** — known CVE likely applies to this version
 - **Yellow** — version changed; review recommended
+- **❓ Manual review** — enrichment was skipped (see [Performance and enrichment limits](#performance-and-enrichment-limits)); use the npm link to investigate
 
 Unchanged packages are omitted.
 
@@ -77,8 +78,6 @@ npm run test:fixtures   # Full pipeline against fixtures (hits OSV API)
 ```
 
 The fixture project uses `cheerio` (direct dep) whose nested `lodash@4.17.15` has known CVEs → red, plus a nested `negotiator` downgrade under `accepts` → yellow. Lockfiles are committed as static JSON — **no `npm install` is run** in CI against fixture data.
-
-After `npm run test:fixtures`, open `fixtures/sample-project/.output/index.html` to preview the report.
 
 After `npm run test:fixtures`, open `fixtures/sample-project/.output/index.html` to preview the report.
 
@@ -348,6 +347,61 @@ report-url: https://your-cdn.example.com/path/to/this-report/
 
 Use `fail-on-red: false` when the fixture intentionally includes CVEs (demo/CI smoke).
 
+### Performance and enrichment limits
+
+Each changed package can trigger CVE lookups (OSV) and changelog discovery (npm + GitHub). A full lockfile refresh — common after `npm update` or a major framework bump — can touch thousands of nested packages.
+
+**`enrichment-limit`** (default `500`) is the main knob. It sets how many changed packages receive full automated enrichment. Above that threshold, the action still diffs and lists **every** change in the HTML report, but rows are marked **❓ Manual review** (yellow) with an npm link only — no CVE or changelog HTTP calls. Hover the badge in the report for a short explanation; reviewers follow the npm link to check advisories and release notes manually.
+
+| Input | Default | Role |
+| --- | ---: | --- |
+| `enrichment-limit` | `500` | Max packages to enrich; above this, manual-review mode for all rows |
+| `enrichment-concurrency` | `8` | Parallel enrichment requests when under the limit |
+| `summary-list-limit` | `100` | Max packages listed in PR comments and job summaries (full list always in the HTML report) |
+
+Example for a large monorepo that still wants full enrichment on big but not enormous diffs:
+
+```yaml
+- uses: thethomaseffect/github-package-lock-analysis@v1
+  with:
+    enrichment-limit: 2000
+    enrichment-concurrency: 12
+```
+
+**How long does it take?** Under the limit, runtime is dominated by outbound API calls. A few hundred unique version changes usually finish in minutes; diffs with thousands of changes can take **up to an hour** depending on OSV/npm/GitHub latency and rate limits. For most teams that only change `package-lock.json` on occasional dependency PRs, that is acceptable — the job runs in the background while reviewers work on other checks.
+
+**Frequent lockfile changes** — if your pipeline touches the lockfile often (nightly bumps, many parallel dependency PRs, automated renovate batches), you may not want analysis on the critical path for every push. Run it **after** your main CI passes so build and test are not waiting on enrichment:
+
+```yaml
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # build, test, lint …
+
+  analyze-lockfile:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: thethomaseffect/github-package-lock-analysis@v1
+        with:
+          lockfile-path: package-lock.json
+          post-pr-comment: true
+          fail-on-red: false   # informational — review the report or Pages URL later
+```
+
+The HTML artifact (Tier 1) or GitHub Pages report (Tier 2) is still produced; the PR comment and job summary link to it even when the job is not a merge gate. Set `fail-on-red: true` only when you want known CVEs to block the workflow.
+
+Alternatively, analyze on merge to `main` only (Tier 2 push trigger) and keep PR runs as artifact-only with `fail-on-red: false` — cumulative diffs via manifest mode mean you do not need a report on every intermediate commit.
+
 ### Inputs
 
 | Input | Default | Description |
@@ -361,6 +415,9 @@ Use `fail-on-red: false` when the fixture intentionally includes CVEs (demo/CI s
 | `post-pr-comment` | `true` | Post/update PR summary comment |
 | `skip-if-unchanged` | `true` | Skip when git diff is empty |
 | `fail-on-red` | `true` | Fail the job when known CVEs are found |
+| `enrichment-limit` | `500` | Max changed packages to enrich with CVE/changelog lookups; above this, all rows are ❓ manual review (npm link only) |
+| `enrichment-concurrency` | `8` | Parallel enrichment requests when under `enrichment-limit` |
+| `summary-list-limit` | `100` | Max changed packages listed in PR comments and job summaries |
 | `audit-existing` | `false` | Manual `workflow_dispatch` only — scan HEAD lockfile for CVEs (no diff) |
 | `artifact-name` | `lockfile-report` | Name referenced in PR comments |
 | `report-url` | *(empty)* | Explicit public report URL (overrides `pages-base-url` for links) |
