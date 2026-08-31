@@ -13,17 +13,17 @@ Submission for the [micro1 Frontier Engineering Challenge 2026](https://www.hack
 
 ## Problem and user
 
-**Who:** A team merging dependency updates on GitHub — reviewers who are not npm supply-chain specialists.
+**Who:** Developers merging dependency updates on GitHub — reviewers who are not npm supply-chain specialists.
 
 **Bottleneck:** When `package-lock.json` changes, nested packages can move without appearing in `package.json`. Most scanners focus on app code or direct deps. Reviewers need a **readable list of every nested version bump**, with CVE context and links, before merge.
 
-**What we built:** A GitHub Action that diffs lockfiles, enriches changes with OSV/NVD data and changelog links, and publishes a static HTML report (artifact, GitHub Pages, or custom host).
+**What I built:** A GitHub Action that diffs lockfiles, enriches changes with OSV/NVD data and changelog links, and publishes a static HTML report (artifact, GitHub Pages, or custom host).
 
 ---
 
 ## Baseline vs advanced solution
 
-The hackathon requires both. We implement them as two runnable paths on the same fixture.
+The hackathon requires both. I implemented them as two runnable paths on the same fixture.
 
 | | **Baseline** | **Advanced** |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ npm run build
 
 ## Improvement changelog (baseline → advanced)
 
-Built during the Aug 28–31 hackathon window (see [PROMPTS.md](./PROMPTS.md) for decision log):
+Built during the Aug 28–31 hackathon window (see [PROMPTS.md](./PROMPTS.md) for my decision log):
 
 1. Lockfile parse/diff (npm v2/v3) with breadcrumb paths, shallow-first sort
 2. OSV CVE enrichment + red/yellow badges

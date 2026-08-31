@@ -152,7 +152,7 @@ The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfi
 
 ## Live demo
 
-This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1`); [`demo/action.yml`](demo/action.yml) is only for our sample-project fixtures.
+This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1`); [`demo/action.yml`](demo/action.yml) is only for the sample-project fixtures.
 
 ## Hackathon submission
 
