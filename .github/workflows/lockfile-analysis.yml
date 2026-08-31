@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       audit-existing:
-        description: Scan the full HEAD lockfile for existing CVEs outside the diff (slow)
+        description: Scan the current HEAD lockfile for existing CVEs (manual only; no diff)
         required: false
         type: boolean
         default: true
@@ -42,7 +42,7 @@ jobs:
           output-dir: report-output
           post-pr-comment: ${{ github.event_name == 'pull_request' }}
           skip-if-unchanged: ${{ github.event_name != 'workflow_dispatch' }}
-          audit-existing: ${{ github.event_name == 'workflow_dispatch' && inputs.audit-existing }}
+          audit-existing: ${{ github.event_name == 'workflow_dispatch' && !inputs.use-fixtures && inputs.audit-existing }}
           fail-on-red: true
 
       - name: Analyze fixture lockfiles (demo)
@@ -56,7 +56,7 @@ jobs:
           project-name: sample-project
           post-pr-comment: false
           skip-if-unchanged: false
-          audit-existing: ${{ inputs.audit-existing }}
+          audit-existing: false
           fail-on-red: true
 
       - name: Resolve report output

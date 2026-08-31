@@ -43,7 +43,7 @@ export function buildPullRequestComment(
   ];
 
   if (result.auditedExisting) {
-    lines.push(`| Existing CVE (not in diff) | ${result.existingRedCount} |`);
+    lines.push(`| Existing CVE | ${result.existingRedCount} |`);
   }
 
   lines.push("", "");
@@ -73,8 +73,8 @@ export function buildPullRequestComment(
     lines.push("### Existing vulnerabilities", "");
     lines.push(
       result.existingRedCount > 0
-        ? `${result.existingRedCount} installed package(s) outside the diff match known CVEs.`
-        : "No additional known CVEs found in the current lockfile outside the diff.",
+        ? `${result.existingRedCount} installed package(s) in the current lockfile match known CVEs.`
+        : "No known CVEs found in the current lockfile.",
     );
     lines.push("");
   }
@@ -92,7 +92,7 @@ export function buildSummaryRows(result: AnalysisResult): Array<[string, string]
   ];
 
   if (result.auditedExisting) {
-    rows.push(["Existing CVE (not in diff)", String(result.existingRedCount)]);
+    rows.push(["Existing CVE", String(result.existingRedCount)]);
   }
 
   return rows;

@@ -26,7 +26,7 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
         `| Review (yellow) | ${result.yellowCount} |`,
     ];
     if (result.auditedExisting) {
-        lines.push(`| Existing CVE (not in diff) | ${result.existingRedCount} |`);
+        lines.push(`| Existing CVE | ${result.existingRedCount} |`);
     }
     lines.push("", "");
     if (result.changedCount > 0) {
@@ -51,8 +51,8 @@ export function buildPullRequestComment(result, artifactName, reportUrl) {
     if (result.auditedExisting) {
         lines.push("### Existing vulnerabilities", "");
         lines.push(result.existingRedCount > 0
-            ? `${result.existingRedCount} installed package(s) outside the diff match known CVEs.`
-            : "No additional known CVEs found in the current lockfile outside the diff.");
+            ? `${result.existingRedCount} installed package(s) in the current lockfile match known CVEs.`
+            : "No known CVEs found in the current lockfile.");
         lines.push("");
     }
     lines.push(buildWorkflowArtifactLink(artifactName, reportUrl, reportUrl));
@@ -65,7 +65,7 @@ export function buildSummaryRows(result) {
         ["Review (yellow)", String(result.yellowCount)],
     ];
     if (result.auditedExisting) {
-        rows.push(["Existing CVE (not in diff)", String(result.existingRedCount)]);
+        rows.push(["Existing CVE", String(result.existingRedCount)]);
     }
     return rows;
 }

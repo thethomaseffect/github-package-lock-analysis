@@ -45,8 +45,8 @@ export function Report({ result }: ReportProps) {
         <section>
           <h2 className="section-title">Existing vulnerabilities</h2>
           <p className="section-note">
-            These packages are already installed at the checked HEAD lockfile resolution. They
-            were not part of this diff but still match known CVEs.
+            Manual audit of the current HEAD lockfile. These packages were not compared
+            against a diff — this section lists installed packages that match known CVEs.
           </p>
           {result.existingVulnerabilities.length === 0 ? (
             <p className="empty">No additional known CVEs found in the current lockfile.</p>

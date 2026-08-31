@@ -14,6 +14,7 @@ export interface RunActionOptions {
     artifactName: string;
     reportUrl?: string;
     workspace: string;
+    eventName?: string;
 }
 export declare function runAction(options: RunActionOptions): Promise<string | null>;
 //# sourceMappingURL=index.d.ts.map

@@ -52,7 +52,7 @@ inputs:
     required: false
     default: ""
   audit-existing:
-    description: Scan the full HEAD lockfile for known CVEs outside the diff (slow; intended for manual runs)
+    description: Manual workflow_dispatch only — scan the current HEAD lockfile for known CVEs (no diff)
     required: false
     default: "false"
   fail-on-red:
