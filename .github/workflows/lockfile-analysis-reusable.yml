@@ -47,7 +47,7 @@ jobs:
 
       - name: Analyze nested lockfile changes
         id: analysis
-        uses: thethomaseffect/github-package-lock-analysis@v1
+        uses: thethomaseffect/github-package-lock-analysis@v1.1
         with:
           lockfile-path: ${{ inputs.lockfile-path }}
           project-name: ${{ inputs.project-name }}

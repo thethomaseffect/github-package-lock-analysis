@@ -7,7 +7,7 @@ Submission for the [micro1 Frontier Engineering Challenge 2026](https://www.hack
 | **Repository** | https://github.com/thethomaseffect/github-package-lock-analysis |
 | **Live demo (Pages index)** | https://thethomaseffect.github.io/github-package-lock-analysis/ |
 | **Example report** | https://thethomaseffect.github.io/github-package-lock-analysis/reports/33384778428/ |
-| **Action (consumers)** | `thethomaseffect/github-package-lock-analysis@v1` |
+| **Action (consumers)** | `thethomaseffect/github-package-lock-analysis@v1.1` |
 
 ---
 
@@ -31,7 +31,7 @@ The hackathon requires both. I implemented them as two runnable paths on the sam
 | **Run locally** | `npm run test:baseline` | `npm run test:fixtures` |
 | **Output** | `fixtures/sample-project/.output-baseline/index.html` | `fixtures/sample-project/.output/index.html` |
 | **Red/yellow on fixture** | 0 red, 2 yellow (no CVE data) | 1 red (`lodash`), 1 yellow (`negotiator`) |
-| **Typical CI use** | Not recommended for production | `uses: thethomaseffect/github-package-lock-analysis@v1` |
+| **Typical CI use** | Not recommended for production | `uses: thethomaseffect/github-package-lock-analysis@v1.1` |
 
 **Measured improvement:** Baseline proves *which* nested packages changed. Advanced answers *whether known CVEs apply* and gives reviewers npm/changelog links — the fixture’s nested `lodash@4.17.15` under `cheerio` is flagged red only in the advanced path.
 
@@ -127,4 +127,4 @@ Agent instructions that shaped the project: [CLAUDE.md](./CLAUDE.md) (repository
 | **Reproducibility** | Single-command setup (`npm ci`), offline unit tests + baseline fixture run, integration fixture run with live OSV, CI green, committed lockfiles (no install) |
 | **Agent solution & engineering** | Full Action + Pages + manifest; [PROMPTS.md](./PROMPTS.md) documents agent-driven iteration |
 | **Measured improvement** | Baseline vs advanced on same fixture; red CVE only after enrichment |
-| **End-to-end quality** | Live Pages demo, `@v1` tag, consumer README, 38 unit tests |
+| **End-to-end quality** | Live Pages demo, `@v1.1` tag, consumer README, 38 unit tests |

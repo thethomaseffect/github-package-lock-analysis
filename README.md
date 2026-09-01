@@ -51,7 +51,7 @@ jobs:
         with:
           fetch-depth: 0   # needed so git can find the base lockfile
 
-      - uses: thethomaseffect/github-package-lock-analysis@v1
+      - uses: thethomaseffect/github-package-lock-analysis@v1.1
         id: analysis
         with:
           lockfile-path: package-lock.json
@@ -72,7 +72,7 @@ That's enough for most teams: PR comment + downloadable HTML artifact. The actio
 ```yaml
 jobs:
   analyze:
-    uses: thethomaseffect/github-package-lock-analysis/.github/workflows/lockfile-analysis-reusable.yml@v1
+    uses: thethomaseffect/github-package-lock-analysis/.github/workflows/lockfile-analysis-reusable.yml@v1.1
     permissions:
       contents: read
       pull-requests: write
@@ -154,7 +154,7 @@ The fixture uses nested `lodash@4.17.15` (red) and `negotiator` (yellow). Lockfi
 
 ## Live demo
 
-This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1`); [`demo/action.yml`](demo/action.yml) is only for the sample-project fixtures.
+This repo publishes a fixture demo to GitHub Pages ([index](https://thethomaseffect.github.io/github-package-lock-analysis/)). Consumer repos use the root action (`@v1.1`, or `@v1` for the latest 1.x release); [`demo/action.yml`](demo/action.yml) is only for the sample-project fixtures.
 
 ## Hackathon submission
 

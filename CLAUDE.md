@@ -104,7 +104,7 @@ Best-effort per changed package: npm version page, GitHub releases/tags/changelo
 │   └── sync-pages-site-from-live.ts  # Pull live Pages before deploy (history retention)
 ├── fixtures/sample-project/   # before/after lockfiles + expected.json
 ├── tests/                     # Vitest unit tests (HTTP mocked)
-└── dist/bundle/               # ncc bundle committed for @v1 consumers
+└── dist/bundle/               # ncc bundle committed for @v1.1 consumers
 ```
 
 ### Technology choices
